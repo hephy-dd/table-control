@@ -7,6 +7,26 @@ Generic 3-axis table control software.
 - ITK CorvusTT
 - ITK Hydra
 
+## SCPI Socket
+
+The application can be used as generic proxy for different table controllers.
+Make sure to enable and configure the SCPI socket in the application preferences.
+
+|Command |Description |Example |
+|--------|------------|--------|
+|`*IDN?` | application identity | `*IDN?` -> `table-control v0.1.0` |
+|`*CLS` | clears error stack | `*CLS` |
+|`[:]POSition?` | get position | `POS?` -> `0.000 0.000 0.000` |
+|`[:]CALibration[:STATe]?` | get calibration | `CAL?` -> `3 3 3` (`1`=cal, `2`=rm, `3`=cal+rm) |
+|`[:]MOVE[:STATe]?` | is moving? | `MOVE?` -> `1` |
+|`[:]MOVE:RELative <POS>` | 3-axis relative move | `MOVE:REL 0 0 4.200` |
+|`[:]MOVE:ABSolute <POS>` | 3-axis absolute move | `MOVE:ABS 10.000 20.000 2.000` |
+|`[:]MOVE:ABORT` | abort a movement | `MOVE:ABORT` |
+|`[:]SYStem:ERRor[:NEXT]?` | next error on stack | `SYS:ERR?` -> `0,"no error"` |
+|`[:]SYStem:ERRor:COUNt?` | size of error stack | `SYS:ERR:COUN?` -> `0` |
+
+All SCPI commands are case insensitive (e.g. `pos?` is equal to `POS?`).
+
 ## Download
 
 See for pre-built Windows binaries in the [releases](https://github.com/hephy-dd/table-control/releases) section.

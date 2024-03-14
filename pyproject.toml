@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "table-control"
-version = "0.1.0"
+version = "0.2.0"
 authors = [
     {name = "Bernhard Arnold", email = "bernhard.arnold@oeaw.ac.at"}
 ]
@@ -22,7 +22,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://hephy.at"
+Homepage = "https://www.oeaw.ac.at/en/hephy/research/detector-development"
 Repository = "https://github.com/hephy-dd/table-control"
 Documentation = "https://github.com/hephy-dd/table-control"
 
