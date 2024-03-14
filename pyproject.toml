@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "table-control"
+version = "0.1.0"
+authors = [
+    {name = "Bernhard Arnold", email = "bernhard.arnold@oeaw.ac.at"}
+]
+description = "Generic 3-axis table control software."
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.11,<4.0"
+
+dependencies = [
+    "PyQt5==5.15.10",
+    "PyQt5-Qt5==5.15.2",
+    "PyQt5-sip==12.13.0",
+    "PyVISA==1.14.1",
+    "PyVISA-py==0.7.1"
+]
+
+[project.urls]
+Homepage = "https://hephy.at"
+Repository = "https://github.com/hephy-dd/table-control"
+Documentation = "https://github.com/hephy-dd/table-control"
+
+[project.scripts]
+table-control = "table_control.__main__:main"

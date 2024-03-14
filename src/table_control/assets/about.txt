@@ -1,0 +1,5 @@
+<h1>{title}</h1>
+<p>Version {version}</p>
+<p>Table control software</p>
+<p>Copyright &copy; 2024 HEPHY, Institute of High Energy Physics.</p>
+<p>This software is licensed under the GNU General Public License v3.0</p>
