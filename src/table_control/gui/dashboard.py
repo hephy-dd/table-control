@@ -2,6 +2,8 @@ from typing import Optional
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+from .utils import loadIcon
+
 
 def decode_calibration(value: int) -> str:
     return {0x1: "CAL", 0x2: "RM", 0x3: "CAL+RM"}.get(value, "NONE")
@@ -10,11 +12,15 @@ def decode_calibration(value: int) -> str:
 class DashboardWidget(QtWidgets.QWidget):
 
     moveRequested = QtCore.pyqtSignal()
+    relativeMoveRequested = QtCore.pyqtSignal(float, float, float)
+    absoluteMoveRequested = QtCore.pyqtSignal(float, float, float)
+    calibrateRequested = QtCore.pyqtSignal(bool ,bool, bool)
+    rangeMeasureRequested = QtCore.pyqtSignal(bool ,bool, bool)
+    stopRequested = QtCore.pyqtSignal()
+    updateIntervalChanged = QtCore.pyqtSignal(float)
 
-    def __init__(self, tableController, parent: Optional[QtWidgets.QWidget] = None) -> None:
+    def __init__(self, parent: Optional[QtWidgets.QWidget] = None) -> None:
         super().__init__(parent)
-
-        self.tableController = tableController
 
         self.xPosSpinBox = QtWidgets.QDoubleSpinBox(self)
         self.xPosSpinBox.setButtonSymbols(QtWidgets.QDoubleSpinBox.NoButtons)
@@ -130,6 +136,10 @@ class DashboardWidget(QtWidgets.QWidget):
         self.loadAbsButton.setMaximumWidth(48)
         self.loadAbsButton.clicked.connect(self.loadAbsPos)
 
+        self.stopButton = QtWidgets.QPushButton("Stop")
+        self.stopButton.setIcon(loadIcon("stop.svg"))
+        self.stopButton.clicked.connect(self.stopRequested)
+
         self.xCalButton = QtWidgets.QPushButton("Cal")
         self.xCalButton.setMaximumWidth(54)
         self.xCalButton.clicked.connect(lambda: self.calibrate(True, False, False))
@@ -155,7 +165,7 @@ class DashboardWidget(QtWidgets.QWidget):
         self.updateIntervalSpinBox.setValue(1)
         self.updateIntervalSpinBox.setSingleStep(0.25)
         self.updateIntervalSpinBox.setSuffix(" s")
-        self.updateIntervalSpinBox.valueChanged.connect(self.updateInterval)
+        self.updateIntervalSpinBox.valueChanged.connect(self.updateIntervalChanged)
 
         positionLayout = QtWidgets.QGridLayout()
         positionLayout.addWidget(QtWidgets.QLabel("X"), 0, 0)
@@ -226,6 +236,8 @@ class DashboardWidget(QtWidgets.QWidget):
         buttonLayout.addWidget(self.clearAbsButton, 6, 4)
         buttonLayout.addWidget(self.loadAbsButton, 6, 6)
 
+        buttonLayout.addWidget(self.stopButton, 7, 3)
+
         bottomLayout = QtWidgets.QGridLayout()
         bottomLayout.addWidget(QtWidgets.QLabel("Update Interval"), 0, 0, 1, 4)
         bottomLayout.addWidget(self.updateIntervalSpinBox, 1, 0)
@@ -265,18 +277,11 @@ class DashboardWidget(QtWidgets.QWidget):
             self.zRmButton,
         ]
 
-    def enterDisconnected(self) -> None:
-        self.setEnabled(False)
-        self.clearState()
+    def updateInterval(self) -> float:
+        return self.updateIntervalSpinBox.value()
 
-    def enterConnected(self) -> None:
-        self.setEnabled(True)
-        for widget in self.controlWidgets:
-            widget.setEnabled(True)
-
-    def enterMoving(self) -> None:
-        for widget in self.controlWidgets:
-            widget.setEnabled(False)
+    def setUpdateInterval(self, interval: float) -> None:
+        return self.updateIntervalSpinBox.setValue(interval)
 
     def clearRelPos(self) -> None:
         self.xRelSpinBox.setValue(0)
@@ -307,24 +312,34 @@ class DashboardWidget(QtWidgets.QWidget):
         self.yCalibrationLineEdit.setText(format(y))
         self.zCalibrationLineEdit.setText(format(z))
 
+    def enterDisconnected(self) -> None:
+        self.setEnabled(False)
+        self.clearState()
+
+    def enterConnected(self) -> None:
+        self.setEnabled(True)
+        for widget in self.controlWidgets:
+            widget.setEnabled(True)
+
+    def enterMoving(self) -> None:
+        for widget in self.controlWidgets:
+            widget.setEnabled(False)
+
     def relativeMove(self, x, y, z) -> None:
         self.moveRequested.emit()
-        self.tableController.moveRelative(x, y, z)
+        self.relativeMoveRequested.emit(x, y, z)
 
     def absoluteMove(self, x, y, z) -> None:
         self.moveRequested.emit()
-        self.tableController.moveAbsolute(x, y, z)
+        self.absoluteMoveRequested.emit(x, y, z)
 
     def calibrate(self, x, y, z) -> None:
         self.moveRequested.emit()
-        self.tableController.calibrate(x, y, z)
+        self.calibrateRequested.emit(x, y, z)
 
     def rangeMeasure(self, x, y, z) -> None:
         self.moveRequested.emit()
-        self.tableController.rangeMeasure(x, y, z)
-
-    def updateInterval(self, interval: float) -> None:
-        self.tableController.setUpdateInterval(interval)
+        self.rangeMeasureRequested.emit(x, y, z)
 
     def clearState(self) -> None:
         self.controllerLabel.clear()

@@ -5,8 +5,9 @@ from typing import Optional
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+from ..core.pluginmanager import PluginManager
+
 from . import APP_TITLE, APP_VERSION
-from .pluginmanager import PluginManager
 from .preferences import PreferencesDialog
 from .controller import TableController
 from .connection import ConnectionDialog
@@ -85,9 +86,15 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # Central widget
 
-        self.dashboard = DashboardWidget(self.tableController)
+        self.dashboard = DashboardWidget(self)
         self.setCentralWidget(self.dashboard)
 
+        self.dashboard.relativeMoveRequested.connect(self.tableController.moveRelative)
+        self.dashboard.absoluteMoveRequested.connect(self.tableController.moveAbsolute)
+        self.dashboard.calibrateRequested.connect(self.tableController.calibrate)
+        self.dashboard.rangeMeasureRequested.connect(self.tableController.rangeMeasure)
+        self.dashboard.stopRequested.connect(self.tableController.requestStop)
+        self.dashboard.updateIntervalChanged.connect(self.tableController.setUpdateInterval)
         self.tableController.infoChanged.connect(self.dashboard.setController)
         self.tableController.positionChanged.connect(self.dashboard.setTablePosition)
         self.tableController.calibrationChanged.connect(self.dashboard.setTableCalibration)
@@ -125,7 +132,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stateMachine.start()
 
     def registerPlugin(self, plugin) -> None:
-        self.pluginManager.registerPlugin(plugin)
+        self.pluginManager.register_plugin(plugin)
 
     def installPlugins(self) -> None:
         self.pluginManager.dispatch("install", (self,))
@@ -138,19 +145,30 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def readSettings(self) -> None:
         settings = QtCore.QSettings()
+        self.pluginManager.dispatch("beforeReadSettings", (settings,))
         settings.beginGroup("mainwindow")
         geometry = settings.value("geometry", QtCore.QByteArray(), QtCore.QByteArray)
+        state = settings.value("state", QtCore.QByteArray(), QtCore.QByteArray)
+        updateInterval = settings.value("updateInterval", 1.0, float)
         settings.endGroup()
         self.restoreGeometry(geometry)
+        self.restoreState(state)
+        self.dashboard.setUpdateInterval(updateInterval)
+        self.pluginManager.dispatch("afterReadSettings", (settings,))
 
     def writeSettings(self) -> None:
         settings = QtCore.QSettings()
+        self.pluginManager.dispatch("beforeWriteSettings", (settings,))
         settings.beginGroup("mainwindow")
         settings.setValue("geometry", self.saveGeometry())
+        settings.setValue("state", self.saveState())
+        settings.setValue("updateInterval", self.dashboard.updateInterval())
         settings.endGroup()
+        self.pluginManager.dispatch("afterWriteSettings", (settings,))
 
     def showPreferences(self) -> None:
-        dialog = PreferencesDialog(self)
+        settings = QtCore.QSettings()
+        dialog = PreferencesDialog(settings, self)
         self.pluginManager.dispatch("beforePreferences", (dialog,))
         dialog.exec()
         self.pluginManager.dispatch("afterPreferences", (dialog,))
@@ -203,25 +221,31 @@ class MainWindow(QtWidgets.QMainWindow):
         self.tableController.requestStop()
 
     def enterDisconnected(self) -> None:
+        self.pluginManager.dispatch("beforeEnterDisconnected", (self,))
         self.connectAction.setEnabled(True)
         self.disconnectAction.setEnabled(False)
         self.stopAction.setEnabled(False)
         self.dashboard.enterDisconnected()
         self.progressBar.hide()
+        self.pluginManager.dispatch("afterEnterDisconnected", (self,))
 
     def enterConnected(self) -> None:
+        self.pluginManager.dispatch("beforeEnterConnected", (self,))
         self.connectAction.setEnabled(False)
         self.disconnectAction.setEnabled(True)
         self.stopAction.setEnabled(True)
         self.dashboard.enterConnected()
         self.progressBar.hide()
+        self.pluginManager.dispatch("afterEnterConnected", (self,))
 
     def enterMoving(self) -> None:
+        self.pluginManager.dispatch("beforeEnterMoving", (self,))
         self.connectAction.setEnabled(False)
         self.disconnectAction.setEnabled(False)
         self.stopAction.setEnabled(True)
         self.dashboard.enterMoving()
         self.progressBar.show()
+        self.pluginManager.dispatch("afterEnterMoving", (self,))
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         if not self.connectAction.isEnabled():

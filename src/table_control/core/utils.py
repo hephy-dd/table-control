@@ -3,8 +3,6 @@ import re
 
 def get_resource_name(resource_name: str) -> tuple[str, str]:
     """Create valid VISA resource name for short descriptors."""
-    resource_name = resource_name.strip()
-
     m = re.match(r"^(\d+)$", resource_name)
     if m:
         resource_name = f"GPIB0::{m.group(1)}::INSTR"

@@ -8,8 +8,10 @@ logger = logging.getLogger(__name__)
 
 class PreferencesDialog(QtWidgets.QDialog):
 
-    def __init__(self, parent: Optional[QtWidgets.QWidget] = None) -> None:
+    def __init__(self, settings: QtCore.QSettings, parent: Optional[QtWidgets.QWidget] = None) -> None:
         super().__init__(parent)
+
+        self.settings = settings
 
         self.tabWidget = QtWidgets.QTabWidget(self)
 

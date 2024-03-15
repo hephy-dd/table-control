@@ -18,45 +18,46 @@ class SCPISocketPlugin:
     def install(self, window) -> None:
         self._server = None
         self._tableController = window.tableController
-        self._restartServer()
+        self.restartServer()
         logger.info("installed %r", type(self).__name__)
 
     def uninstall(self, window) -> None:
         if self._server:
-            self._server.shutdown()
+            self._server.shutdown(timeout=60.0)
         logger.info("uninstalled %r", type(self).__name__)
 
     def beforePreferences(self, dialog: QtWidgets.QDialog) -> None:
         self.preferencesTab = PreferencesWidget()
-        data = self._settings()
+        data = self.readSettings(dialog.settings)
         self.preferencesTab.fromDict(data)
         dialog.tabWidget.addTab(self.preferencesTab, "SCPI")
 
     def afterPreferences(self, dialog: QtWidgets.QDialog) -> None:
         if dialog.result() == dialog.Accepted:
-            settings = QtCore.QSettings()
-            settings.setValue("plugins/scpi_socket", self.preferencesTab.toDict())
-            self._restartServer()
+            self.writeSettings(dialog.settings, self.preferencesTab.toDict())
+            self.restartServer()
         index = dialog.tabWidget.indexOf(self.preferencesTab)
         dialog.tabWidget.removeTab(index)
 
-    def _settings(self) -> dict:
-        settings = QtCore.QSettings()
-        return settings.value("plugins/scpi_socket", {}, dict)
-
-    def _restartServer(self) -> None:
+    def restartServer(self) -> None:
+        data = self.readSettings(QtCore.QSettings())
         if self._server:
             logging.info("shutdown SCPI server...")
-            self._server.shutdown()
+            self._server.shutdown(timeout=60.0)
             self._server = None
-            logging.info("shutdown SCPI server... done.")
-        data = self._settings()
         if data.get("enabled", False):
-            logging.info("starting SCPI server...")
-            self._server = SocketServer(self._tableController, data.get("hostname", "localhost"), data.get("port", 4000))
+            hostname = data.get("hostname", "localhost")
+            port = data.get("port", 4000)
+            logging.info("starting SCPI server on port %s...", port)
+            self._server = SocketServer(self._tableController, hostname, port)
             thread = threading.Thread(target=self._server)
             thread.start()
-            logging.info("starting SCPI server... done.")
+
+    def readSettings(self, settings) -> dict:
+        return settings.value("plugins/scpi_socket", {}, dict)
+
+    def writeSettings(self, settings, data: dict) -> None:
+        settings.setValue("plugins/scpi_socket", data)
 
 
 class PreferencesWidget(QtWidgets.QWidget):
@@ -111,36 +112,40 @@ class PreferencesWidget(QtWidgets.QWidget):
 class SocketServer:
 
     def __init__(self, table, host, port) -> None:
-        self.shutdown_requested: bool = False
+        self.shutdown_requested = threading.Event()
+        self.shutdown_finished = threading.Event()
         self.table = table
         self.error_stack: list = []
         self.host: str = host
         self.port: int = port
         self.timeout: float = 1.0
 
-    def shutdown(self) -> bool:
-        self.shutdown_requested = True
+    def shutdown(self, timeout: Optional[float] = None) -> bool:
+        self.shutdown_requested.set()
+        if timeout is not None:
+            self.shutdown_finished.wait(timeout=timeout)
 
     def __call__(self) -> None:
-        while not self.shutdown_requested:
+        while not self.shutdown_requested.is_set():
             try:
                 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     s.bind((self.host, self.port))
                     s.listen()
-                    logger.info(f"Listening on {self.host}:{self.port}")
+                    logger.info(f"{type(self).__name__!r} listening on {self.host}:{self.port}")
 
                     while True:
                         ready, _, _ = select.select([s], [], [], self.timeout)
                         if s in ready:
                             conn, addr = s.accept()
                             self.handle_client(conn, addr)
-                        if self.shutdown_requested:
+                        if self.shutdown_requested.is_set():
                             break
 
             except Exception as exc:
                 logger.exception(exc)
-                time.sleep(1)
+                time.sleep(1.0)
+        self.shutdown_finished.set()
 
     def handle_client(self, conn, addr):
         logging.info(f"Connection from {addr}")
