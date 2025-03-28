@@ -1,5 +1,5 @@
 import logging
-from typing import Iterable, Optional
+from typing import Iterable
 
 logger = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ class PluginManager:
         if plugin not in self.plugins:
             self.plugins.append(plugin)
 
-    def dispatch(self, name, args: Optional[Iterable] = None) -> None:
+    def dispatch(self, name, args: Iterable | None = None) -> None:
         for plugin in self.plugins:
             if hasattr(plugin, name):
                 try:

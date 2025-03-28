@@ -1,5 +1,5 @@
 import logging
-from typing import Optional
+from typing import Any
 
 import pyvisa
 
@@ -8,11 +8,11 @@ __all__ = ["Resource"]
 
 class Resource:
 
-    def __init__(self, resource_name: str, visa_library: Optional[str] = None, **options) -> None:
+    def __init__(self, resource_name: str, visa_library: str | None = None, **options) -> None:
         self.resource_name: str = resource_name
         self.visa_library: str = visa_library or ""
         self.options: dict = options
-        self.resource: Optional = None
+        self.resource: Any = None
 
     def __enter__(self):
         try:

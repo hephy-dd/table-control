@@ -1,9 +1,0 @@
-<!DOCTYPE RCC><RCC version="1.0">
-  <qresource>
-    <file alias="about.txt">../src/table_control/assets/about.txt</file>
-    <file alias="icons/connect.svg">../src/table_control/assets/icons/connect.svg</file>
-    <file alias="icons/disconnect.svg">../src/table_control/assets/icons/disconnect.svg</file>
-    <file alias="icons/stop.svg">../src/table_control/assets/icons/stop.svg</file>
-    <file alias="icons/table_control.svg">../src/table_control/assets/icons/table_control.svg</file>
-  </qresource>
-</RCC>

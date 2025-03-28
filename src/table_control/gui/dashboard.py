@@ -1,6 +1,4 @@
-from typing import Optional
-
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 from .utils import loadIcon
 
@@ -11,33 +9,33 @@ def decode_calibration(value: int) -> str:
 
 class DashboardWidget(QtWidgets.QWidget):
 
-    moveRequested = QtCore.pyqtSignal()
-    relativeMoveRequested = QtCore.pyqtSignal(float, float, float)
-    absoluteMoveRequested = QtCore.pyqtSignal(float, float, float)
-    calibrateRequested = QtCore.pyqtSignal(bool ,bool, bool)
-    rangeMeasureRequested = QtCore.pyqtSignal(bool ,bool, bool)
-    stopRequested = QtCore.pyqtSignal()
-    updateIntervalChanged = QtCore.pyqtSignal(float)
+    moveRequested = QtCore.Signal()
+    relativeMoveRequested = QtCore.Signal(float, float, float)
+    absoluteMoveRequested = QtCore.Signal(float, float, float)
+    calibrateRequested = QtCore.Signal(bool ,bool, bool)
+    rangeMeasureRequested = QtCore.Signal(bool ,bool, bool)
+    stopRequested = QtCore.Signal()
+    updateIntervalChanged = QtCore.Signal(float)
 
-    def __init__(self, parent: Optional[QtWidgets.QWidget] = None) -> None:
+    def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
 
         self.xPosSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.xPosSpinBox.setButtonSymbols(QtWidgets.QDoubleSpinBox.NoButtons)
+        self.xPosSpinBox.setButtonSymbols(QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons)
         self.xPosSpinBox.setReadOnly(True)
         self.xPosSpinBox.setDecimals(3)
         self.xPosSpinBox.setRange(-10000, 10000)
         self.xPosSpinBox.setSuffix(" mm")
 
         self.yPosSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.yPosSpinBox.setButtonSymbols(QtWidgets.QDoubleSpinBox.NoButtons)
+        self.yPosSpinBox.setButtonSymbols(QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons)
         self.yPosSpinBox.setReadOnly(True)
         self.yPosSpinBox.setDecimals(3)
         self.yPosSpinBox.setRange(-10000, 10000)
         self.yPosSpinBox.setSuffix(" mm")
 
         self.zPosSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.zPosSpinBox.setButtonSymbols(QtWidgets.QDoubleSpinBox.NoButtons)
+        self.zPosSpinBox.setButtonSymbols(QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons)
         self.zPosSpinBox.setReadOnly(True)
         self.zPosSpinBox.setDecimals(3)
         self.zPosSpinBox.setRange(-10000, 10000)
@@ -336,10 +334,16 @@ class DashboardWidget(QtWidgets.QWidget):
     def calibrate(self, x, y, z) -> None:
         self.moveRequested.emit()
         self.calibrateRequested.emit(x, y, z)
+        if x: self.xCalibrationLineEdit.clear()
+        if y: self.yCalibrationLineEdit.clear()
+        if z: self.zCalibrationLineEdit.clear()
 
     def rangeMeasure(self, x, y, z) -> None:
         self.moveRequested.emit()
         self.rangeMeasureRequested.emit(x, y, z)
+        if x: self.xCalibrationLineEdit.clear()
+        if y: self.yCalibrationLineEdit.clear()
+        if z: self.zCalibrationLineEdit.clear()
 
     def clearState(self) -> None:
         self.controllerLabel.clear()

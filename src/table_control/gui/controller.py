@@ -4,9 +4,9 @@ import queue
 import logging
 import random
 import contextlib
-from typing import Optional
+from typing import Any
 
-from PyQt5 import QtCore
+from PySide6 import QtCore
 
 from ..core.driver import Vector
 from ..core.resource import Resource
@@ -22,9 +22,9 @@ def poll_interval(steps, default_step=1.0):
 
 
 def create_resource(resource: dict) -> Resource:
-    resource_name = resource.get("resource_name")
-    visa_library = resource.get("visa_library", "@py")
-    options = resource.get("options", {})
+    resource_name: str = resource.get("resource_name", "")
+    visa_library: str = resource.get("visa_library", "@py")
+    options: dict = resource.get("options", {})
     return Resource(resource_name, visa_library, **options)
 
 
@@ -46,12 +46,12 @@ class Message:
 class MessageQueue:
 
     def __init__(self) -> None:
-        self._q = queue.Queue()
+        self._q: queue.Queue = queue.Queue()
 
     def put(self, name, *args) -> None:
         self._q.put_nowait(Message(name, *args))
 
-    def pop(self) -> Optional[Message]:
+    def pop(self) -> Message | None:
         try:
             return self._q.get(timeout=0.25)
         except queue.Empty:
@@ -61,27 +61,27 @@ class MessageQueue:
 
 class TableController(QtCore.QObject):
 
-    connected = QtCore.pyqtSignal()
-    disconnected = QtCore.pyqtSignal()
-    infoChanged = QtCore.pyqtSignal(str)
-    positionChanged = QtCore.pyqtSignal(float, float, float)
-    movementStarted = QtCore.pyqtSignal()
-    movementFinished = QtCore.pyqtSignal()
-    calibrationChanged = QtCore.pyqtSignal(int, int, int)
-    failed = QtCore.pyqtSignal(Exception)
+    connected = QtCore.Signal()
+    disconnected = QtCore.Signal()
+    infoChanged = QtCore.Signal(str)
+    positionChanged = QtCore.Signal(float, float, float)
+    movementStarted = QtCore.Signal()
+    movementFinished = QtCore.Signal()
+    calibrationChanged = QtCore.Signal(int, int, int)
+    failed = QtCore.Signal(Exception)
 
     def __init__(self) -> None:
         super().__init__()
         self.update_interval: float = 1.0
         self.messages = MessageQueue()
         self.handler = MessageHandler(self)
-        self.state = {}
-        self._appliance: Optional[Appliance] = None
+        self.state: dict[str, Any] = {}
+        self._appliance: Appliance | None = None
         self._abort = threading.Event()
         self._thread = threading.Thread(target=self.eventLoop)
         self._thread.start()
 
-    def appliance(self) -> Optional[Appliance]:
+    def appliance(self) -> Appliance | None:
         return self._appliance
 
     def setAppliance(self, appliance: Appliance) -> None:
@@ -97,10 +97,10 @@ class TableController(QtCore.QObject):
 
     # Commands
 
-    def connect(self) -> None:
+    def connectTable(self) -> None:
         self.messages.put("connect")
 
-    def disconnect(self) -> None:
+    def disconnectTable(self) -> None:
         self.messages.put("disconnect")
 
     def requestStop(self) -> None:
@@ -124,7 +124,7 @@ class TableController(QtCore.QObject):
     def setUpdateInterval(self, interval: float) -> None:
         self.update_interval = float(interval)
 
-    def isStopRequested(self) -> None:
+    def isStopRequested(self) -> bool:
         return "stop_request" in self.state
 
     def isMoving(self) -> bool:

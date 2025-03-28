@@ -1,9 +1,8 @@
 import logging
 import threading
 import traceback
-from typing import Optional
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtStateMachine, QtWidgets
 
 from ..core.pluginmanager import PluginManager
 
@@ -17,7 +16,7 @@ from .utils import loadIcon, loadText
 
 class MainWindow(QtWidgets.QMainWindow):
 
-    def __init__(self, parent: Optional[QtWidgets.QWidget] = None) -> None:
+    def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
 
         self.pluginManager = PluginManager()
@@ -27,35 +26,35 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.appliances: dict = {}
 
-        self.quitAction = QtWidgets.QAction(self)
+        self.quitAction = QtGui.QAction(self)
         self.quitAction.setText("&Quit")
         self.quitAction.setShortcut("Ctrl+Q")
         self.quitAction.triggered.connect(self.close)
 
-        self.preferencesAction = QtWidgets.QAction(self)
+        self.preferencesAction = QtGui.QAction(self)
         self.preferencesAction.setText("&Preferences")
         self.preferencesAction.triggered.connect(self.showPreferences)
 
-        self.connectAction = QtWidgets.QAction(self)
+        self.connectAction = QtGui.QAction(self)
         self.connectAction.setText("&Connect")
         self.connectAction.setIcon(loadIcon("connect.svg"))
-        self.connectAction.triggered.connect(self.connect)
+        self.connectAction.triggered.connect(self.connectTable)
 
-        self.disconnectAction = QtWidgets.QAction(self)
+        self.disconnectAction = QtGui.QAction(self)
         self.disconnectAction.setText("&Disconnect")
         self.disconnectAction.setIcon(loadIcon("disconnect.svg"))
-        self.disconnectAction.triggered.connect(self.disconnect)
+        self.disconnectAction.triggered.connect(self.disconnectTable)
 
-        self.stopAction = QtWidgets.QAction(self)
+        self.stopAction = QtGui.QAction(self)
         self.stopAction.setText("&Stop")
         self.stopAction.setIcon(loadIcon("stop.svg"))
         self.stopAction.triggered.connect(self.requestStop)
 
-        self.aboutQtAction = QtWidgets.QAction(self)
+        self.aboutQtAction = QtGui.QAction(self)
         self.aboutQtAction.setText("About &Qt")
         self.aboutQtAction.triggered.connect(self.showAboutQt)
 
-        self.aboutAction = QtWidgets.QAction(self)
+        self.aboutAction = QtGui.QAction(self)
         self.aboutAction.setText("&About")
         self.aboutAction.triggered.connect(self.showAbout)
 
@@ -107,13 +106,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.statusBar().addPermanentWidget(self.progressBar)
 
-        self.connectedState = QtCore.QState()
+        self.connectedState = QtStateMachine.QState()
         self.connectedState.entered.connect(self.enterConnected)
 
-        self.disconnectedState = QtCore.QState()
+        self.disconnectedState = QtStateMachine.QState()
         self.disconnectedState.entered.connect(self.enterDisconnected)
 
-        self.movingState = QtCore.QState()
+        self.movingState = QtStateMachine.QState()
         self.movingState.entered.connect(self.enterMoving)
 
         self.connectedState.addTransition(self.tableController.disconnected, self.disconnectedState)
@@ -124,7 +123,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.movingState.addTransition(self.tableController.movementFinished, self.connectedState)
         self.movingState.addTransition(self.tableController.disconnected, self.disconnectedState)
 
-        self.stateMachine = QtCore.QStateMachine(self)
+        self.stateMachine = QtStateMachine.QStateMachine(self)
         self.stateMachine.addState(self.connectedState)
         self.stateMachine.addState(self.disconnectedState)
         self.stateMachine.addState(self.movingState)
@@ -147,9 +146,9 @@ class MainWindow(QtWidgets.QMainWindow):
         settings = QtCore.QSettings()
         self.pluginManager.dispatch("beforeReadSettings", (settings,))
         settings.beginGroup("mainwindow")
-        geometry = settings.value("geometry", QtCore.QByteArray(), QtCore.QByteArray)
-        state = settings.value("state", QtCore.QByteArray(), QtCore.QByteArray)
-        updateInterval = settings.value("updateInterval", 1.0, float)
+        geometry: QtCore.QByteArray = settings.value("geometry", QtCore.QByteArray(), QtCore.QByteArray)  # type: ignore
+        state: QtCore.QByteArray = settings.value("state", QtCore.QByteArray(), QtCore.QByteArray)  # type: ignore
+        updateInterval: float = settings.value("updateInterval", 1.0, float)  # type: ignore
         settings.endGroup()
         self.restoreGeometry(geometry)
         self.restoreState(state)
@@ -172,7 +171,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.pluginManager.dispatch("beforePreferences", (dialog,))
         dialog.exec()
         self.pluginManager.dispatch("afterPreferences", (dialog,))
-        if dialog.result() == dialog.Accepted:
+        if dialog.result() == dialog.DialogCode.Accepted:
             ...
 
     def showAboutQt(self) -> None:
@@ -186,36 +185,38 @@ class MainWindow(QtWidgets.QMainWindow):
         dialog = QtWidgets.QMessageBox(self)
         dialog.setWindowTitle("Exception")
         dialog.setText(format(exc))
-        dialog.setIcon(QtWidgets.QMessageBox.Critical)
+        dialog.setIcon(QtWidgets.QMessageBox.Icon.Critical)
         dialog.setDetailedText(details)
-        dialog.setStandardButtons(dialog.Ok)
-        dialog.setDefaultButton(dialog.Ok)
+        dialog.setStandardButtons(dialog.StandardButton.Ok)
+        dialog.setDefaultButton(dialog.StandardButton.Ok)
         # Fix message box width
-        spacer = QtWidgets.QSpacerItem(448, 0, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        dialog.layout().addItem(spacer, dialog.layout().rowCount(), 0, 1, dialog.layout().columnCount())
+        spacer = QtWidgets.QSpacerItem(448, 0, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+        layout = dialog.layout()
+        if isinstance(layout, QtWidgets.QGridLayout):
+            layout.addItem(spacer, layout.rowCount(), 0, 1, layout.columnCount())
         dialog.exec()
 
-    def setupConnection(self) -> None:
+    def setupConnection(self) -> bool:
         dialog = ConnectionDialog(self)
         for name, appliance in self.appliances.items():
             dialog.addAppliance(name, appliance)
         dialog.readSettings()
         dialog.exec()
-        if dialog.result() == dialog.Accepted:
+        if dialog.result() == dialog.DialogCode.Accepted:
             dialog.writeSettings()
             self.tableController.setAppliance(dialog.appliance())
-        return dialog.result() == dialog.Accepted
+        return dialog.result() == dialog.DialogCode.Accepted
 
-    def connect(self) -> None:
+    def connectTable(self) -> None:
         if self.setupConnection():
             self.connectAction.setEnabled(False)
             self.disconnectAction.setEnabled(False)
-            self.tableController.connect()
+            self.tableController.connectTable()
 
-    def disconnect(self) -> None:
+    def disconnectTable(self) -> None:
         self.connectAction.setEnabled(False)
         self.disconnectAction.setEnabled(False)
-        self.tableController.disconnect()
+        self.tableController.disconnectTable()
 
     def requestStop(self) -> None:
         self.tableController.requestStop()
@@ -250,7 +251,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         if not self.connectAction.isEnabled():
             result = QtWidgets.QMessageBox.question(self, "Quit?", "Close current connection?")
-            if result != QtWidgets.QMessageBox.Yes:
+            if result != QtWidgets.QMessageBox.StandardButton.Yes:
                 event.ignore()
                 return
             self.disconnectAction.trigger()

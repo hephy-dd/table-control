@@ -1,7 +1,6 @@
 import logging
-from typing import Optional
 
-from PyQt5 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from ..core.resource import Resource
 from ..core import utils
@@ -13,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class ConnectionDialog(QtWidgets.QDialog):
 
-    def __init__(self, parent: Optional[QtWidgets.QWidget] = None) -> None:
+    def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
 
         self.setWindowTitle("Connection")
@@ -47,8 +46,8 @@ class ConnectionDialog(QtWidgets.QDialog):
         layout1.addWidget(self.resourceTerminationComboBox[1])
 
         self.buttonBox = QtWidgets.QDialogButtonBox(self)
-        self.buttonBox.addButton(QtWidgets.QDialogButtonBox.Ok)
-        self.buttonBox.addButton(QtWidgets.QDialogButtonBox.Cancel)
+        self.buttonBox.addButton(QtWidgets.QDialogButtonBox.StandardButton.Ok)
+        self.buttonBox.addButton(QtWidgets.QDialogButtonBox.StandardButton.Cancel)
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
 
@@ -61,8 +60,8 @@ class ConnectionDialog(QtWidgets.QDialog):
     def readSettings(self) -> None:
         settings = QtCore.QSettings()
         settings.beginGroup("connectiondialog")
-        currentDriver = settings.value("currentDriver", "", str)
-        resources = settings.value("resources", [], list)
+        currentDriver: str = settings.value("currentDriver", "", str)  # type: ignore
+        resources: list[dict] = settings.value("resources", [], list)  # type: ignore
         settings.endGroup()
         index = self.driverComboBox.findText(currentDriver)
         self.driverComboBox.setCurrentIndex(max(0, index))
@@ -88,10 +87,10 @@ class ConnectionDialog(QtWidgets.QDialog):
         name = self.driverComboBox.itemText(index)
         appliance = self.driverComboBox.itemData(index)
         resources = appliance.get("resources", 0)
-        for index, widget in enumerate(self.resourceNameLineEdit.values()):
-            widget.setEnabled(resources > index)
-        for index, widget in enumerate(self.resourceTerminationComboBox.values()):
-            widget.setEnabled(resources > index)
+        for index, lineEdit in enumerate(self.resourceNameLineEdit.values()):
+            lineEdit.setEnabled(resources > index)
+        for index, comboBox in enumerate(self.resourceTerminationComboBox.values()):
+            comboBox.setEnabled(resources > index)
 
     def getResource(self, index: int) -> dict:
         resource_name = utils.get_resource_name(self.resourceNameLineEdit[index].text())

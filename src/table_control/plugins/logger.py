@@ -3,7 +3,7 @@ import logging
 import threading
 from typing import Callable, List
 
-from PyQt5 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtGui, QtWidgets
 
 __all__ = ["LoggerPlugin"]
 
@@ -18,11 +18,11 @@ class LoggerPlugin:
 
         self.loggingDockWidget = QtWidgets.QDockWidget("Logging")
         self.loggingDockWidget.setObjectName("loggingDockWidget")
-        self.loggingDockWidget.setAllowedAreas(QtCore.Qt.BottomDockWidgetArea)
+        self.loggingDockWidget.setAllowedAreas(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea)
         self.loggingDockWidget.setWidget(self.logWidget)
-        self.loggingDockWidget.setFeatures(QtWidgets.QDockWidget.DockWidgetClosable)
+        self.loggingDockWidget.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetClosable)
         self.loggingDockWidget.hide()
-        window.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.loggingDockWidget)
+        window.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.loggingDockWidget)
 
         self.loggingAction = self.loggingDockWidget.toggleViewAction()
         self.loggingAction.setStatusTip("Toggle logging dock window")
@@ -64,16 +64,16 @@ class RecordsQueue:
 
 class LogWidget(QtWidgets.QTextEdit):
 
-    MaximumEntries: int = 1024 * 1024
+    MaximumEntries: int = 4096
     """Maximum number of visible log entries."""
 
-    received = QtCore.pyqtSignal(logging.LogRecord)
+    received = QtCore.Signal(logging.LogRecord)
     """Received is emitted when a new log record is appended by a logger."""
 
     updateInterval: int = 200
     """Update interval in milliseconds."""
 
-    def __init__(self, parent: QtWidgets.QWidget = None) -> None:
+    def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
         self.setReadOnly(True)
         self.document().setMaximumBlockCount(type(self).MaximumEntries)
@@ -86,7 +86,7 @@ class LogWidget(QtWidgets.QTextEdit):
         self.updateTimer.timeout.connect(self.applyRecords)
         self.updateTimer.start(self.updateInterval)
 
-        self.recordFormats = {}
+        self.recordFormats: dict = {}
 
         errorFormat = QtGui.QTextCharFormat()
         errorFormat.setForeground(QtGui.QColor("red"))

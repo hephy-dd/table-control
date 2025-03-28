@@ -1,6 +1,6 @@
 import sys
 
-from PyQt5 import QtWidgets
+from PySide6 import QtWidgets
 
 from . import APP_TITLE, APP_VERSION
 from .mainwindow import MainWindow
