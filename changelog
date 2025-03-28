@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Migrated from PyQt5 to PySide6.
+- Migrated from PyQt5 to PySide6 (#1).
 
 ## [0.2.0] - 2024-03-14
 
