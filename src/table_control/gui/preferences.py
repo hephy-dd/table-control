@@ -1,14 +1,12 @@
 import logging
-from typing import Optional
-
-from PyQt5 import QtCore, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 logger = logging.getLogger(__name__)
 
 
 class PreferencesDialog(QtWidgets.QDialog):
 
-    def __init__(self, settings: QtCore.QSettings, parent: Optional[QtWidgets.QWidget] = None) -> None:
+    def __init__(self, settings: QtCore.QSettings, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
 
         self.settings = settings
@@ -16,8 +14,8 @@ class PreferencesDialog(QtWidgets.QDialog):
         self.tabWidget = QtWidgets.QTabWidget(self)
 
         self.buttonBox = QtWidgets.QDialogButtonBox(self)
-        self.buttonBox.addButton(QtWidgets.QDialogButtonBox.Ok)
-        self.buttonBox.addButton(QtWidgets.QDialogButtonBox.Cancel)
+        self.buttonBox.addButton(QtWidgets.QDialogButtonBox.StandardButton.Ok)
+        self.buttonBox.addButton(QtWidgets.QDialogButtonBox.StandardButton.Cancel)
         self.buttonBox.accepted.connect(self.accept)
         self.buttonBox.rejected.connect(self.reject)
 

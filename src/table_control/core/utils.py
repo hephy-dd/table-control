@@ -1,7 +1,7 @@
 import re
 
 
-def get_resource_name(resource_name: str) -> tuple[str, str]:
+def get_resource_name(resource_name: str) -> str:
     """Create valid VISA resource name for short descriptors."""
     m = re.match(r"^(\d+)$", resource_name)
     if m:
@@ -18,7 +18,7 @@ def get_resource_name(resource_name: str) -> tuple[str, str]:
     return resource_name
 
 
-def get_visa_library(resource_name: str) -> tuple[str, str]:
+def get_visa_library(resource_name: str) -> str:
     """Deduce VISA library from resource name."""
     visa_library = ""
 
