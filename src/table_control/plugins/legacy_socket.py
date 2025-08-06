@@ -5,7 +5,7 @@ Supported TCP commands:
 PO? - Get Table Position and Status
 MA=x.xxx,x.xxx,x.xxx - Move absolute [X,Y,Z]
 MR=x.xxx,x - Move relative [StepWidth,Axis]
-??? - This command
+??? - command help
 
 """
 
@@ -181,11 +181,13 @@ class SocketServer:
 
     def handle_message(self, message: str) -> str | None:
         command = message.split("=")[0]
+        error_response = "Command not valid !"
 
         # PO?
         if command == "PO?":
             x, y, z = self.table.position()
-            return f"{x:.3f},{y:.3f},{z:.3f}"  # TODO!
+            status = 0  # TODO!
+            return f"{x:.6f},{y:.6f},{z:.6f},{status:d}"
 
         # MR=DELTA,AXIS
         if command == "MR":
@@ -197,7 +199,7 @@ class SocketServer:
                     vec[int(axis) - 1] = float(delta)
                     self.table.moveRelative(vec[0], vec[1], vec[2])
             except Exception:
-                return None
+                return error_response
             return None
 
         # MA=X,Y,Z
@@ -207,16 +209,17 @@ class SocketServer:
                 x, y, z = args.split(",")
                 self.table.moveAbsolute(float(x), float(y), float(z))
             except Exception:
-                return None
+                return error_response
             return None
 
         # ???
         if command == "???":
             return "\n".join([
+                "Command list:",
                 "PO? - Get Table Position and Status",
                 "MA=x.xxx,x.xxx,x.xxx - Move absolute [X,Y,Z]",
                 "MR=x.xxx,x - Move relative [StepWidth,Axis]",
                 "??? - This command",
             ])
 
-        return None
+        return error_response
