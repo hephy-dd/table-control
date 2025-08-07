@@ -7,11 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.4.0] - 2025-08-06
+## [0.4.0] - 2025-08-07
 
 ### Added
 
-- Legacy TCP socket plugin (#3).
+- Legacy TCP socket plugin for backward compatibility (#3).
+- Dummy controller module to simulate table movements.
+- Added `CONTRIBUTING.md` file for project contribution guidelines.
+
+### Changed
+
+- Updated PySide6 dependency from 6.8.3 to 6.9.1
+- Refactored codebase to fully comply with Python PEP 8 style guidelines.
+- Renamed this `changelog` to `CHANGELOG.md`
 
 ## [0.3.0] - 2025-03-28
 

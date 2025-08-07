@@ -11,14 +11,14 @@ class PreferencesDialog(QtWidgets.QDialog):
 
         self.settings = settings
 
-        self.tabWidget = QtWidgets.QTabWidget(self)
+        self.tab_widget = QtWidgets.QTabWidget(self)
 
-        self.buttonBox = QtWidgets.QDialogButtonBox(self)
-        self.buttonBox.addButton(QtWidgets.QDialogButtonBox.StandardButton.Ok)
-        self.buttonBox.addButton(QtWidgets.QDialogButtonBox.StandardButton.Cancel)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
+        self.button_box = QtWidgets.QDialogButtonBox(self)
+        self.button_box.addButton(QtWidgets.QDialogButtonBox.StandardButton.Ok)
+        self.button_box.addButton(QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
 
         layout = QtWidgets.QVBoxLayout(self)
-        layout.addWidget(self.tabWidget)
-        layout.addWidget(self.buttonBox)
+        layout.addWidget(self.tab_widget)
+        layout.addWidget(self.button_box)

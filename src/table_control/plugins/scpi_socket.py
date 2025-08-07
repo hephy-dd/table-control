@@ -36,8 +36,8 @@ class SCPISocketPlugin:
 
     def install(self, window) -> None:
         self._server: SocketServer | None = None
-        self._tableController = window.tableController
-        self.restartServer()
+        self._tableController = window.table_controller
+        self.restart_server()
         logger.info("installed %r", type(self).__name__)
 
     def uninstall(self, window) -> None:
@@ -45,21 +45,21 @@ class SCPISocketPlugin:
             self._server.shutdown(timeout=60.0)
         logger.info("uninstalled %r", type(self).__name__)
 
-    def beforePreferences(self, dialog: PreferencesDialog) -> None:
-        self.preferencesTab = PreferencesWidget()
-        data = self.readSettings(dialog.settings)
-        self.preferencesTab.fromDict(data)
-        dialog.tabWidget.addTab(self.preferencesTab, "SCPI")
+    def before_preferences(self, dialog: PreferencesDialog) -> None:
+        self.preferences_tab = PreferencesWidget()
+        data = self.read_settings(dialog.settings)
+        self.preferences_tab.from_dict(data)
+        dialog.tab_widget.addTab(self.preferences_tab, "SCPI")
 
-    def afterPreferences(self, dialog: PreferencesDialog) -> None:
+    def after_preferences(self, dialog: PreferencesDialog) -> None:
         if dialog.result() == dialog.DialogCode.Accepted:
-            self.writeSettings(dialog.settings, self.preferencesTab.toDict())
-            self.restartServer()
-        index = dialog.tabWidget.indexOf(self.preferencesTab)
-        dialog.tabWidget.removeTab(index)
+            self.write_settings(dialog.settings, self.preferences_tab.to_dict())
+            self.restart_server()
+        index = dialog.tab_widget.indexOf(self.preferences_tab)
+        dialog.tab_widget.removeTab(index)
 
-    def restartServer(self) -> None:
-        data = self.readSettings(QtCore.QSettings())
+    def restart_server(self) -> None:
+        data = self.read_settings(QtCore.QSettings())
         if self._server:
             logger.info("SCPI socket: shutdown server...")
             self._server.shutdown(timeout=60.0)
@@ -72,10 +72,10 @@ class SCPISocketPlugin:
             thread = threading.Thread(target=self._server)
             thread.start()
 
-    def readSettings(self, settings: QtCore.QSettings) -> dict:
+    def read_settings(self, settings: QtCore.QSettings) -> dict:
         return settings.value("plugins/scpi_socket", {})  # type: ignore
 
-    def writeSettings(self, settings: QtCore.QSettings, data: dict) -> None:
+    def write_settings(self, settings: QtCore.QSettings, data: dict) -> None:
         settings.setValue("plugins/scpi_socket", data)
 
 
@@ -84,48 +84,48 @@ class PreferencesWidget(QtWidgets.QWidget):
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self.enabledCheckBox = QtWidgets.QCheckBox(self)
-        self.enabledCheckBox.setText("Enabled")
+        self.enabled_check_box = QtWidgets.QCheckBox(self)
+        self.enabled_check_box.setText("Enabled")
 
-        self.hostnameLineEdit = QtWidgets.QLineEdit(self)
+        self.hostname_line_edit = QtWidgets.QLineEdit(self)
 
-        self.portSpinBox = QtWidgets.QSpinBox(self)
-        self.portSpinBox.setRange(0, 99999)
+        self.port_spin_box = QtWidgets.QSpinBox(self)
+        self.port_spin_box.setRange(0, 99999)
 
         layout = QtWidgets.QFormLayout(self)
-        layout.addRow(self.enabledCheckBox)
-        layout.addRow("Hostname", self.hostnameLineEdit)
-        layout.addRow("Port", self.portSpinBox)
+        layout.addRow(self.enabled_check_box)
+        layout.addRow("Hostname", self.hostname_line_edit)
+        layout.addRow("Port", self.port_spin_box)
 
     def hostname(self) -> str:
-        return self.hostnameLineEdit.text().strip()
+        return self.hostname_line_edit.text().strip()
 
-    def setHostname(self, hostname: str) -> None:
-        self.hostnameLineEdit.setText(hostname.strip())
+    def set_hostname(self, hostname: str) -> None:
+        self.hostname_line_edit.setText(hostname.strip())
 
     def port(self) -> int:
-        return self.portSpinBox.value()
+        return self.port_spin_box.value()
 
-    def setPort(self, port: int) -> None:
-        self.portSpinBox.setValue(port)
+    def set_port(self, port: int) -> None:
+        self.port_spin_box.setValue(port)
 
-    def isServerEnabled(self) -> bool:
-        return self.enabledCheckBox.isChecked()
+    def is_server_enabled(self) -> bool:
+        return self.enabled_check_box.isChecked()
 
-    def setServerEnabled(self, enabled: bool) -> None:
-        self.enabledCheckBox.setChecked(enabled)
+    def set_server_enabled(self, enabled: bool) -> None:
+        self.enabled_check_box.setChecked(enabled)
 
-    def toDict(self) -> dict:
+    def to_dict(self) -> dict:
         return {
             "hostname": self.hostname(),
             "port": self.port(),
-            "enabled": self.isServerEnabled(),
+            "enabled": self.is_server_enabled(),
         }
 
-    def fromDict(self, data: dict) -> None:
-        self.setHostname(data.get("hostname", "localhost"))
-        self.setPort(data.get("port", 4000))
-        self.setServerEnabled(data.get("enabled", False))
+    def from_dict(self, data: dict) -> None:
+        self.set_hostname(data.get("hostname", "localhost"))
+        self.set_port(data.get("port", 4000))
+        self.set_server_enabled(data.get("enabled", False))
 
 
 class SocketServer:
@@ -212,14 +212,14 @@ class SocketServer:
 
         # [:]MOVE[:STATe]?
         if re.match(r"^\:?move(\:stat(e)?)?\?$", command):
-            moving = self.table.isMoving()
+            moving = self.table.is_moving()
             return "1" if moving else "0"
 
         # [:]MOVE:RELative X Y Z
         if re.match(r"^\:?move\:rel(ative)?$", command):
             try:
                 _, dx, dy, dz = message.split()
-                self.table.moveRelative(float(dx), float(dy), float(dz))
+                self.table.move_relative(float(dx), float(dy), float(dz))
             except Exception:
                 self.error_stack.append((101, "invalid attributes"))
                 return None
@@ -229,7 +229,7 @@ class SocketServer:
         if re.match(r"^\:?move\:abs(olute)?$", command):
             try:
                 _, x, y, z = message.split()
-                self.table.moveAbsolute(float(x), float(y), float(z))
+                self.table.move_absolute(float(x), float(y), float(z))
             except Exception:
                 self.error_stack.append((101, "invalid attributes"))
                 return None
@@ -237,7 +237,7 @@ class SocketServer:
 
         # [:]MOVE:ABORT
         if re.match(r"^\:?move\:abort$", command):
-            self.table.requestStop()
+            self.table.request_stop()
             return None
 
         # [:]SYStem:ERRor:COUNt?

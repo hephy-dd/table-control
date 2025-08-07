@@ -10,10 +10,10 @@ from .appliances.hydra2x import Hydra2xPlugin
 
 
 def register_plugins(app) -> None:
-    app.registerPlugin(LoggerPlugin())
-    app.registerPlugin(SCPISocketPlugin())
-    app.registerPlugin(LegacySocketPlugin())
+    app.register_plugin(LoggerPlugin())
+    app.register_plugin(SCPISocketPlugin())
+    app.register_plugin(LegacySocketPlugin())
 
-    app.registerPlugin(CorvusPlugin())
-    app.registerPlugin(Hydra2xPlugin())
-    app.registerPlugin(DummyPlugin())
+    app.register_plugin(CorvusPlugin())
+    app.register_plugin(Hydra2xPlugin())
+    app.register_plugin(DummyPlugin())

@@ -8,7 +8,7 @@ __all__ = ["DummyPlugin"]
 class DummyPlugin:
 
     def install(self, window) -> None:
-        window.registerAppliance("Dummy", {"driver": DummyDriver})
+        window.register_appliance("Dummy", {"driver": DummyDriver})
 
     def uninstall(self, window) -> None:
         ...
@@ -16,7 +16,7 @@ class DummyPlugin:
 
 class DummyDriver(Driver):
 
-    def __init__(self, resources):
+    def __init__(self, resources) -> None:
         super().__init__(resources)
         self._pos: list[float] = [0.0, 0.0, 0.0]
         self._vel: list[float] = [2.0, 2.0, 2.0]
@@ -67,7 +67,7 @@ class DummyDriver(Driver):
         dt = now - self._t_start
 
         # Compute each axis’s new position
-        new_pos: List[float] = [
+        new_pos: list[float] = [
             self._clamp_step(s, tgt, v, dt)
             for s, tgt, v in zip(self._start_pos, self._target_pos, self._vel)
         ]

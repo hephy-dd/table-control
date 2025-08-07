@@ -63,11 +63,11 @@ class TableController(QtCore.QObject):
 
     connected = QtCore.Signal()
     disconnected = QtCore.Signal()
-    infoChanged = QtCore.Signal(str)
-    positionChanged = QtCore.Signal(float, float, float)
-    movementStarted = QtCore.Signal()
-    movementFinished = QtCore.Signal()
-    calibrationChanged = QtCore.Signal(int, int, int)
+    info_changed = QtCore.Signal(str)
+    position_changed = QtCore.Signal(float, float, float)
+    movement_started = QtCore.Signal()
+    movement_finished = QtCore.Signal()
+    calibration_changed = QtCore.Signal(int, int, int)
     failed = QtCore.Signal(Exception)
 
     def __init__(self) -> None:
@@ -78,16 +78,16 @@ class TableController(QtCore.QObject):
         self.state: dict[str, Any] = {}
         self._appliance: Appliance | None = None
         self._abort = threading.Event()
-        self._thread = threading.Thread(target=self.eventLoop)
+        self._thread = threading.Thread(target=self.event_loop)
         self._thread.start()
 
     def appliance(self) -> Appliance | None:
         return self._appliance
 
-    def setAppliance(self, appliance: Appliance) -> None:
+    def set_appliance(self, appliance: Appliance) -> None:
         self._appliance = appliance
 
-    def isRunning(self) -> bool:
+    def is_running(self) -> bool:
         return not self._abort.is_set()
 
     def shutdown(self) -> None:
@@ -97,37 +97,37 @@ class TableController(QtCore.QObject):
 
     # Commands
 
-    def connectTable(self) -> None:
+    def connect_table(self) -> None:
         self.messages.put("connect")
 
-    def disconnectTable(self) -> None:
+    def disconnect_table(self) -> None:
         self.messages.put("disconnect")
 
-    def requestStop(self) -> None:
+    def request_stop(self) -> None:
         self.state.update({"stop_request": True})
 
-    def requestUpdate(self) -> None:
+    def request_update(self) -> None:
         self.messages.put("update")
 
-    def moveRelative(self, x, y, z):
+    def move_relative(self, x, y, z):
         self.messages.put("move_relative", x, y, z)
 
-    def moveAbsolute(self, x, y, z):
+    def move_absolute(self, x, y, z):
         self.messages.put("move_absolute", x, y, z)
 
     def calibrate(self, x, y, z):
         self.messages.put("calibrate", x, y, z)
 
-    def rangeMeasure(self, x, y, z):
+    def range_measure(self, x, y, z):
         self.messages.put("range_measure", x, y, z)
 
-    def setUpdateInterval(self, interval: float) -> None:
+    def set_update_interval(self, interval: float) -> None:
         self.update_interval = float(interval)
 
-    def isStopRequested(self) -> bool:
+    def is_stop_requested(self) -> bool:
         return "stop_request" in self.state
 
-    def isMoving(self) -> bool:
+    def is_moving(self) -> bool:
         return self.state.get("is_moving", False)
 
     def position(self) -> tuple[float, float, float]:
@@ -136,35 +136,35 @@ class TableController(QtCore.QObject):
     def calibration(self) -> tuple[int, int ,int]:
         return self.state.get("calibration", (0, 0, 0))
 
-    def updateMoving(self, state: bool) -> None:
+    def update_moving(self, state: bool) -> None:
         is_moving = self.state.get("is_moving")
         self.state.update({"is_moving": bool(state)})
         if is_moving != state:
             if state:
-                self.movementStarted.emit()
+                self.movement_started.emit()
             else:
-                self.movementFinished.emit()
+                self.movement_finished.emit()
 
-    def updatePosition(self, position: Vector) -> None:
+    def update_position(self, position: Vector) -> None:
         x, y, z = position
         self.state.update({"position": (x, y, z)})
-        self.positionChanged.emit(x, y, z)
+        self.position_changed.emit(x, y, z)
 
-    def updateCalibration(self, calibration: Vector) -> None:
+    def update_calibration(self, calibration: Vector) -> None:
         x, y, z = calibration
         self.state.update({"calibration": (int(x), int(y), int(z))})
-        self.calibrationChanged.emit(int(x), int(y), int(z))
+        self.calibration_changed.emit(int(x), int(y), int(z))
 
     def clear(self) -> None:
         self.state.clear()
-        self.positionChanged.emit(float('nan'), float('nan'), float('nan'))
+        self.position_changed.emit(float('nan'), float('nan'), float('nan'))
 
     # Event loop
 
-    def eventLoop(self) -> None:
-        while self.isRunning():
+    def event_loop(self) -> None:
+        while self.is_running():
             try:
-                self.handler.handleMessages()
+                self.handler.handle_messages()
             except Exception as exc:
                 logging.exception(exc)
             time.sleep(1)  # throttle
@@ -175,12 +175,12 @@ class MessageHandler:
     def __init__(self, controller) -> None:
         self.controller = controller
 
-    def handleMessages(self) -> None:
+    def handle_messages(self) -> None:
         msg = self.controller.messages.pop()
         if msg and msg.name == "connect":
-            self.handleConnection()
+            self.handle_connection()
 
-    def handleConnection(self):
+    def handle_connection(self) -> None:
         try:
             self.controller.clear()
             appliance = self.controller.appliance()
@@ -190,33 +190,33 @@ class MessageHandler:
                 self.controller.connected.emit()
                 driver.configure()
                 info = driver.identify()
-                self.controller.infoChanged.emit(format(info))
+                self.controller.info_changed.emit(format(info))
                 t0 = time.monotonic()
-                while self.controller.isRunning():
-                    self.handleStop(driver)
+                while self.controller.is_running():
+                    self.handle_stop(driver)
                     msg = self.controller.messages.pop()
                     if msg:
                         if msg.name == "disconnect":
                             break
                         if msg.name == "move_relative":
                             x, y, z = msg.args
-                            self.moveRelative(driver, x, y, z)
+                            self.move_relative(driver, x, y, z)
                         elif msg.name == "move_absolute":
                             x, y, z = msg.args
-                            self.moveAbsolute(driver, x, y, z)
+                            self.move_absolute(driver, x, y, z)
                         elif msg.name == "calibrate":
                             x, y, z = msg.args
                             self.calibrate(driver, x, y, z)
                         elif msg.name == "range_measure":
                             x, y, z = msg.args
-                            self.rangeMeasure(driver, x, y, z)
+                            self.range_measure(driver, x, y, z)
                         elif msg.name == "update":
-                            self.updatePosition(driver)
-                            self.updateCalibration(driver)
+                            self.update_position(driver)
+                            self.update_calibration(driver)
                     # Auto insert update request in regular intervals
                     elif time.monotonic() - t0 >= self.controller.update_interval:
                         t0 = time.monotonic()
-                        self.controller.requestUpdate()
+                        self.controller.request_update()
                     else:
                         time.sleep(0.250)  # throttle
         except Exception as exc:
@@ -226,80 +226,80 @@ class MessageHandler:
             self.controller.clear()
             self.controller.disconnected.emit()
 
-    def updatePosition(self, driver):
+    def update_position(self, driver) -> None:
         pos = driver.position()
-        self.controller.updatePosition(pos)
+        self.controller.update_position(pos)
 
-    def updateCalibration(self, driver):
+    def update_calibration(self, driver) -> None:
         cal = driver.calibration_state()
-        self.controller.updateCalibration(cal)
+        self.controller.update_calibration(cal)
 
-    def moveRelative(self, driver, x, y, z):
-        self.controller.updateMoving(True)
+    def move_relative(self, driver, x, y, z) -> None:
+        self.controller.update_moving(True)
         driver.move_relative(Vector(x, y, z))
         interval = poll_interval([0.010, 0.100, 0.500], 1.0)
         t0 = time.monotonic()
         while driver.is_moving():
-            self.handleStop(driver)
+            self.handle_stop(driver)
             pos = driver.position()
-            self.controller.updatePosition(pos)
+            self.controller.update_position(pos)
             if time.monotonic() - t0 > TIMEOUT:
                 raise TimeoutError()
             time.sleep(next(interval))
         pos = driver.position()
-        self.controller.updatePosition(pos)
-        self.controller.updateMoving(False)
+        self.controller.update_position(pos)
+        self.controller.update_moving(False)
 
-    def moveAbsolute(self, driver, x, y, z):
-        self.controller.updateMoving(True)
+    def move_absolute(self, driver, x, y, z) -> None:
+        self.controller.update_moving(True)
         driver.move_absolute(Vector(x, y, z))
         interval = poll_interval([0.010, 0.100, 0.500], 1.0)
         t0 = time.monotonic()
         while driver.is_moving():
-            self.handleStop(driver)
+            self.handle_stop(driver)
             pos = driver.position()
-            self.controller.updatePosition(pos)
+            self.controller.update_position(pos)
             if time.monotonic() - t0 > TIMEOUT:
                 raise TimeoutError()
             time.sleep(next(interval))
         pos = driver.position()
-        self.controller.updatePosition(pos)
-        self.controller.updateMoving(False)
+        self.controller.update_position(pos)
+        self.controller.update_moving(False)
 
-    def calibrate(self, driver, x, y, z):
-        self.controller.updateMoving(True)
+    def calibrate(self, driver, x, y, z) -> None:
+        self.controller.update_moving(True)
         driver.calibrate(Vector(x, y, z))
         interval = poll_interval([0.010, 0.100, 0.500], 1.0)
         t0 = time.monotonic()
         while driver.is_moving():
-            self.handleStop(driver)
+            self.handle_stop(driver)
             pos = driver.position()
-            self.controller.updatePosition(pos)
+            self.controller.update_position(pos)
             if time.monotonic() - t0 > TIMEOUT:
                 raise TimeoutError()
             time.sleep(next(interval))
         pos = driver.position()
-        self.controller.updatePosition(pos)
-        self.controller.updateMoving(False)
+        self.controller.update_position(pos)
+        self.controller.update_moving(False)
 
-    def rangeMeasure(self, driver, x, y, z):
-        self.controller.updateMoving(True)
+    def range_measure(self, driver, x, y, z) -> None:
+        self.controller.update_moving(True)
         driver.range_measure(Vector(x, y, z))
         interval = poll_interval([0.010, 0.100, 0.500], 1.0)
         t0 = time.monotonic()
         while driver.is_moving():
-            self.handleStop(driver)
+            self.handle_stop(driver)
             pos = driver.position()
-            self.controller.updatePosition(pos)
+            self.controller.update_position(pos)
             if time.monotonic() - t0 > TIMEOUT:
                 raise TimeoutError()
             time.sleep(next(interval))
-        self.controller.updateMoving(False)
+        self.controller.update_moving(False)
         pos = driver.position()
-        self.controller.updatePosition(pos)
-        self.controller.updateMoving(False)
+        self.controller.update_position(pos)
+        self.controller.update_moving(False)
 
-    def handleStop(self, driver):
+    def handle_stop(self, driver) -> None:
         stopRequest = self.controller.state.pop("stop_request", None)
         if stopRequest:
             driver.abort()

@@ -17,85 +17,87 @@ class ConnectionDialog(QtWidgets.QDialog):
 
         self.setWindowTitle("Connection")
 
-        self.driverComboBox = QtWidgets.QComboBox(self)
+        self.driver_combo_box = QtWidgets.QComboBox(self)
 
-        self.resourceNameLineEdit = {}
-        self.resourceNameLineEdit[0] = QtWidgets.QLineEdit(self)
-        self.resourceNameLineEdit[1] = QtWidgets.QLineEdit(self)
+        self.resource_name_line_edit = {}
+        self.resource_name_line_edit[0] = QtWidgets.QLineEdit(self)
+        self.resource_name_line_edit[1] = QtWidgets.QLineEdit(self)
 
-        self.resourceTerminationComboBox = {}
-        self.resourceTerminationComboBox[0] = QtWidgets.QComboBox()
-        self.resourceTerminationComboBox[0].addItem("CR+LF", "\r\n")
-        self.resourceTerminationComboBox[0].addItem("CR", "\r")
-        self.resourceTerminationComboBox[0].addItem("LF", "\n")
-        self.resourceTerminationComboBox[1] = QtWidgets.QComboBox()
-        self.resourceTerminationComboBox[1].addItem("CR+LF", "\r\n")
-        self.resourceTerminationComboBox[1].addItem("CR", "\r")
-        self.resourceTerminationComboBox[1].addItem("LF", "\n")
+        self.resource_termination_combo_box = {}
+        self.resource_termination_combo_box[0] = QtWidgets.QComboBox()
+        self.resource_termination_combo_box[0].addItem("CR+LF", "\r\n")
+        self.resource_termination_combo_box[0].addItem("CR", "\r")
+        self.resource_termination_combo_box[0].addItem("LF", "\n")
+        self.resource_termination_combo_box[1] = QtWidgets.QComboBox()
+        self.resource_termination_combo_box[1].addItem("CR+LF", "\r\n")
+        self.resource_termination_combo_box[1].addItem("CR", "\r")
+        self.resource_termination_combo_box[1].addItem("LF", "\n")
 
         self.widget = QtWidgets.QWidget(self)
 
-        layout1 = QtWidgets.QVBoxLayout(self.widget)
-        layout1.addWidget(QtWidgets.QLabel("Controller"))
-        layout1.addWidget(self.driverComboBox)
-        layout1.addWidget(QtWidgets.QLabel("Resource 1"))
-        layout1.addWidget(self.resourceNameLineEdit[0])
-        layout1.addWidget(self.resourceTerminationComboBox[0])
-        layout1.addWidget(QtWidgets.QLabel("Resource 2"))
-        layout1.addWidget(self.resourceNameLineEdit[1])
-        layout1.addWidget(self.resourceTerminationComboBox[1])
+        widget_layout = QtWidgets.QVBoxLayout(self.widget)
+        widget_layout.addWidget(QtWidgets.QLabel("Controller"))
+        widget_layout.addWidget(self.driver_combo_box)
+        widget_layout.addWidget(QtWidgets.QLabel("Resource 1"))
+        widget_layout.addWidget(self.resource_name_line_edit[0])
+        widget_layout.addWidget(self.resource_termination_combo_box[0])
+        widget_layout.addWidget(QtWidgets.QLabel("Resource 2"))
+        widget_layout.addWidget(self.resource_name_line_edit[1])
+        widget_layout.addWidget(self.resource_termination_combo_box[1])
 
-        self.buttonBox = QtWidgets.QDialogButtonBox(self)
-        self.buttonBox.addButton(QtWidgets.QDialogButtonBox.StandardButton.Ok)
-        self.buttonBox.addButton(QtWidgets.QDialogButtonBox.StandardButton.Cancel)
-        self.buttonBox.accepted.connect(self.accept)
-        self.buttonBox.rejected.connect(self.reject)
+        self.button_box = QtWidgets.QDialogButtonBox(self)
+        self.button_box.addButton(QtWidgets.QDialogButtonBox.StandardButton.Ok)
+        self.button_box.addButton(QtWidgets.QDialogButtonBox.StandardButton.Cancel)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
 
         layout = QtWidgets.QVBoxLayout(self)
         layout.addWidget(self.widget)
-        layout.addWidget(self.buttonBox)
+        layout.addWidget(self.button_box)
 
-        self.driverComboBox.currentIndexChanged.connect(self.updateInputs)
+        self.driver_combo_box.currentIndexChanged.connect(self.update_inputs)
 
-    def readSettings(self) -> None:
+    def read_settings(self) -> None:
         settings = QtCore.QSettings()
-        settings.beginGroup("connectiondialog")
-        currentDriver: str = settings.value("currentDriver", "", str)  # type: ignore
+        settings.beginGroup("connection_dialog")
+        currentDriver: str = settings.value("current_driver", "", str)  # type: ignore
         resources: list[dict] = settings.value("resources", [], list)  # type: ignore
         settings.endGroup()
-        index = self.driverComboBox.findText(currentDriver)
-        self.driverComboBox.setCurrentIndex(max(0, index))
-        for index, widget in enumerate(self.resourceNameLineEdit.values()):
+        index = self.driver_combo_box.findText(currentDriver)
+        self.driver_combo_box.setCurrentIndex(max(0, index))
+        for index, widget in enumerate(self.resource_name_line_edit.values()):
             if index < len(resources):
                 widget.setText(resources[index].get("resource_name", ""))
-                self.resourceTerminationComboBox[index].setCurrentIndex(self.resourceTerminationComboBox[index].findData(resources[index].get("termination", "\r\n")))
+                self.resource_termination_combo_box[index].setCurrentIndex(
+                    self.resource_termination_combo_box[index].findData(resources[index].get("termination", "\r\n"))
+                )
 
-    def writeSettings(self) -> None:
+    def write_settings(self) -> None:
         resources = []
-        for index, widget in enumerate(self.resourceNameLineEdit.values()):
+        for index, widget in enumerate(self.resource_name_line_edit.values()):
             resources.append({
                 "resource_name": widget.text(),
-                "termination": self.resourceTerminationComboBox[index].currentData() or "\r\n",
+                "termination": self.resource_termination_combo_box[index].currentData() or "\r\n",
             })
         settings = QtCore.QSettings()
-        settings.beginGroup("connectiondialog")
-        settings.setValue("currentDriver", self.driverComboBox.currentText())
+        settings.beginGroup("connection_dialog")
+        settings.setValue("current_driver", self.driver_combo_box.currentText())
         settings.setValue("resources", resources)
         settings.endGroup()
 
-    def updateInputs(self, index: int) -> None:
-        name = self.driverComboBox.itemText(index)
-        appliance = self.driverComboBox.itemData(index)
+    def update_inputs(self, index: int) -> None:
+        name = self.driver_combo_box.itemText(index)
+        appliance = self.driver_combo_box.itemData(index)
         resources = appliance.get("resources", 0)
-        for index, lineEdit in enumerate(self.resourceNameLineEdit.values()):
+        for index, lineEdit in enumerate(self.resource_name_line_edit.values()):
             lineEdit.setEnabled(resources > index)
-        for index, comboBox in enumerate(self.resourceTerminationComboBox.values()):
+        for index, comboBox in enumerate(self.resource_termination_combo_box.values()):
             comboBox.setEnabled(resources > index)
 
-    def getResource(self, index: int) -> dict:
-        resource_name = utils.get_resource_name(self.resourceNameLineEdit[index].text())
+    def get_resource(self, index: int) -> dict:
+        resource_name = utils.get_resource_name(self.resource_name_line_edit[index].text())
         visa_library = utils.get_visa_library(resource_name)
-        termination = self.resourceTerminationComboBox[index].currentData()
+        termination = self.resource_termination_combo_box[index].currentData()
         return {
             "resource_name": resource_name,
             "visa_library": visa_library,
@@ -105,14 +107,14 @@ class ConnectionDialog(QtWidgets.QDialog):
             },
         }
 
-    def addAppliance(self, name: str, appliance: dict) -> None:
-        self.driverComboBox.addItem(name, appliance)
+    def add_appliance(self, name: str, appliance: dict) -> None:
+        self.driver_combo_box.addItem(name, appliance)
 
     def appliance(self) -> Appliance:
-        name = self.driverComboBox.currentText()
-        appliance = self.driverComboBox.currentData()
+        name = self.driver_combo_box.currentText()
+        appliance = self.driver_combo_box.currentData()
         driver = appliance.get("driver")
         resources = []
         for index in range(appliance.get("resources", 0)):
-            resources.append(self.getResource(index))
+            resources.append(self.get_resource(index))
         return Appliance(name, driver, resources)

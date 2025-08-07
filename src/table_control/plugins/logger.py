@@ -12,27 +12,28 @@ class LoggerPlugin:
 
     def install(self, window) -> None:
         self.logger = logging.getLogger()
-        self.logWidget = LogWidget()
-        self.logWidget.addLogger(self.logger)
-        self.logWidget.setLevel(logging.DEBUG)
+        self.log_widget = LogWidget()
+        self.log_widget.add_logger(self.logger)
+        self.log_widget.set_level(logging.DEBUG)
 
-        self.loggingDockWidget = QtWidgets.QDockWidget("Logging")
-        self.loggingDockWidget.setObjectName("loggingDockWidget")
-        self.loggingDockWidget.setAllowedAreas(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea)
-        self.loggingDockWidget.setWidget(self.logWidget)
-        self.loggingDockWidget.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetClosable)
-        self.loggingDockWidget.hide()
-        window.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.loggingDockWidget)
+        self.logging_dock_widget = QtWidgets.QDockWidget("Logging")
+        self.logging_dock_widget.setObjectName("logging_dock_widget")
+        self.logging_dock_widget.setAllowedAreas(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea)
+        self.logging_dock_widget.setWidget(self.log_widget)
+        self.logging_dock_widget.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetClosable)
+        self.logging_dock_widget.hide()
+        window.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.logging_dock_widget)
 
-        self.loggingAction = self.loggingDockWidget.toggleViewAction()
-        self.loggingAction.setStatusTip("Toggle logging dock window")
+        self.logging_action = self.logging_dock_widget.toggleViewAction()
+        self.logging_action.setStatusTip("Toggle logging dock window")
 
-        window.viewMenu.menuAction().setVisible(True)  # enable view menu
-        window.viewMenu.addAction(self.loggingAction)
+        window.view_menu.menuAction().setVisible(True)  # enable view menu
+        window.view_menu.addAction(self.logging_action)
 
     def uninstall(self, window) -> None:
-        window.viewMenu.removeAction(self.loggingAction)
-        self.logWidget.removeLogger(logging.getLogger())
+        window.view_menu.removeAction(self.logging_action)
+        self.log_widget.remove_logger(self.logger)
+        self.log_widget.shutdown()
 
 
 class Handler(logging.Handler):
@@ -64,65 +65,70 @@ class RecordsQueue:
 
 class LogWidget(QtWidgets.QTextEdit):
 
-    MaximumEntries: int = 4096
+    MAX_ENTRIES: int = 4096
     """Maximum number of visible log entries."""
+
+    UPDATE_INTERVAL: int = 200
+    """Update interval in milliseconds."""
+
+    TIME_FORMAT: str = "yyyy-MM-dd hh:mm:ss"
 
     received = QtCore.Signal(logging.LogRecord)
     """Received is emitted when a new log record is appended by a logger."""
 
-    updateInterval: int = 200
-    """Update interval in milliseconds."""
-
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
         self.setReadOnly(True)
-        self.document().setMaximumBlockCount(type(self).MaximumEntries)
-        self.recordsQueue = RecordsQueue()
+        self.document().setMaximumBlockCount(type(self).MAX_ENTRIES)
+        self.records_queue = RecordsQueue()
         self.handler = Handler(self.received.emit)
-        self.setLevel(logging.INFO)
-        self.received.connect(self.appendRecord)
+        self.set_level(logging.INFO)
+        self.received.connect(self.append_record)
 
-        self.updateTimer = QtCore.QTimer()
-        self.updateTimer.timeout.connect(self.applyRecords)
-        self.updateTimer.start(self.updateInterval)
+        self.update_timer = QtCore.QTimer()
+        self.update_timer.timeout.connect(self.apply_records)
+        self.update_timer.start(type(self).UPDATE_INTERVAL)
 
-        self.recordFormats: dict = {}
+        self.record_formats: dict[int, QtGui.QTextCharFormat] = {}
 
-        errorFormat = QtGui.QTextCharFormat()
-        errorFormat.setForeground(QtGui.QColor("red"))
-        self.recordFormats[logging.ERROR] = errorFormat
+        error_format = QtGui.QTextCharFormat()
+        error_format.setForeground(QtGui.QColor("red"))
+        self.record_formats[logging.ERROR] = error_format
 
-        warningFormat = QtGui.QTextCharFormat()
-        warningFormat.setForeground(QtGui.QColor("orange"))
-        self.recordFormats[logging.WARNING] = warningFormat
+        warning_format = QtGui.QTextCharFormat()
+        warning_format.setForeground(QtGui.QColor("orange"))
+        self.record_formats[logging.WARNING] = warning_format
 
-        infoFormat = QtGui.QTextCharFormat()
-        infoFormat.setForeground(QtGui.QColor())
-        self.recordFormats[logging.INFO] = infoFormat
+        info_format = QtGui.QTextCharFormat()
+        info_format.setForeground(QtGui.QColor())
+        self.record_formats[logging.INFO] = info_format
 
-        debugFormat = QtGui.QTextCharFormat()
-        debugFormat.setForeground(QtGui.QColor("grey"))
-        self.recordFormats[logging.DEBUG] = debugFormat
+        debug_format = QtGui.QTextCharFormat()
+        debug_format.setForeground(QtGui.QColor("grey"))
+        self.record_formats[logging.DEBUG] = debug_format
 
-    def setLevel(self, level: int) -> None:
+    def shutdown(self) -> None:
+        self.update_timer.stop()
+
+    def set_level(self, level: int) -> None:
         """Set log level of widget."""
         self.handler.setLevel(level)
 
-    def addLogger(self, logger: logging.Logger) -> None:
+    def add_logger(self, logger: logging.Logger) -> None:
         """Add logger to widget."""
         logger.addHandler(self.handler)
 
-    def removeLogger(self, logger: logging.Logger) -> None:
+    def remove_logger(self, logger: logging.Logger) -> None:
         """Remove logger from widget."""
         logger.removeHandler(self.handler)
 
-    def appendRecord(self, record: logging.LogRecord) -> None:
+    def append_record(self, record: logging.LogRecord) -> None:
         """Append log record to queue."""
-        self.recordsQueue.append(record)
+        self.records_queue.append(record)
 
-    def applyRecords(self) -> None:
+    def apply_records(self) -> None:
         """Append records from queue to log widget."""
-        records = self.recordsQueue.fetch()
+        records = self.records_queue.fetch()
         if records:
             # Get current scrollbar position
             scrollbar = self.verticalScrollBar()
@@ -133,29 +139,29 @@ class LogWidget(QtWidgets.QTextEdit):
                 lock = True
             # Append formatted log messages
             for record in records:
-                for level, recordFormat in self.recordFormats.items():
+                for level, record_format in self.record_formats.items():
                     if record.levelno >= level:
-                        self.setCurrentCharFormat(recordFormat)
+                        self.setCurrentCharFormat(record_format)
                         break
-                self.append(self.formatRecord(record))
+                self.append(self.format_record(record))
             # Scroll to bottom
             if lock:
                 scrollbar.setValue(scrollbar.maximum())
             else:
                 scrollbar.setValue(position)
 
-    def ensureRecentRecordsVisible(self) -> None:
+    def ensure_recent_records_visible(self) -> None:
         scrollbar = self.verticalScrollBar()
         scrollbar.setValue(scrollbar.maximum())
 
     @classmethod
-    def formatTime(cls, seconds: float) -> str:
+    def format_time(cls, seconds: float) -> str:
         """Format timestamp for log record."""
         dt = QtCore.QDateTime.fromMSecsSinceEpoch(int(seconds * 1e3))
-        return dt.toString("yyyy-MM-dd hh:mm:ss")
+        return dt.toString(cls.TIME_FORMAT)
 
     @classmethod
-    def formatRecord(cls, record: logging.LogRecord) -> str:
+    def format_record(cls, record: logging.LogRecord) -> str:
         """Format log record."""
-        timestamp = cls.formatTime(record.created)
+        timestamp = cls.format_time(record.created)
         return "{}\t{}\t{}".format(timestamp, record.levelname, record.message)

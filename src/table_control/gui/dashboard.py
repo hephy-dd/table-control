@@ -1,6 +1,6 @@
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from .utils import loadIcon
+from .utils import load_icon
 
 
 def decode_calibration(value: int) -> str:
@@ -9,347 +9,353 @@ def decode_calibration(value: int) -> str:
 
 class DashboardWidget(QtWidgets.QWidget):
 
-    moveRequested = QtCore.Signal()
-    relativeMoveRequested = QtCore.Signal(float, float, float)
-    absoluteMoveRequested = QtCore.Signal(float, float, float)
-    calibrateRequested = QtCore.Signal(bool ,bool, bool)
-    rangeMeasureRequested = QtCore.Signal(bool ,bool, bool)
-    stopRequested = QtCore.Signal()
-    updateIntervalChanged = QtCore.Signal(float)
+    move_requested = QtCore.Signal()
+    relative_move_requested = QtCore.Signal(float, float, float)
+    absolute_move_requested = QtCore.Signal(float, float, float)
+    calibrate_requested = QtCore.Signal(bool ,bool, bool)
+    range_measure_requested = QtCore.Signal(bool ,bool, bool)
+    stop_requested = QtCore.Signal()
+    update_interval_changed = QtCore.Signal(float)
 
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self.xPosSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.xPosSpinBox.setButtonSymbols(QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons)
-        self.xPosSpinBox.setReadOnly(True)
-        self.xPosSpinBox.setDecimals(3)
-        self.xPosSpinBox.setRange(-10000, 10000)
-        self.xPosSpinBox.setSuffix(" mm")
+        self.x_pos_spin_box = QtWidgets.QDoubleSpinBox(self)
+        self.x_pos_spin_box.setButtonSymbols(QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons)
+        self.x_pos_spin_box.setReadOnly(True)
+        self.x_pos_spin_box.setDecimals(3)
+        self.x_pos_spin_box.setRange(-10000, 10000)
+        self.x_pos_spin_box.setSuffix(" mm")
 
-        self.yPosSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.yPosSpinBox.setButtonSymbols(QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons)
-        self.yPosSpinBox.setReadOnly(True)
-        self.yPosSpinBox.setDecimals(3)
-        self.yPosSpinBox.setRange(-10000, 10000)
-        self.yPosSpinBox.setSuffix(" mm")
+        self.y_pos_spin_box = QtWidgets.QDoubleSpinBox(self)
+        self.y_pos_spin_box.setButtonSymbols(QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons)
+        self.y_pos_spin_box.setReadOnly(True)
+        self.y_pos_spin_box.setDecimals(3)
+        self.y_pos_spin_box.setRange(-10000, 10000)
+        self.y_pos_spin_box.setSuffix(" mm")
 
-        self.zPosSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.zPosSpinBox.setButtonSymbols(QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons)
-        self.zPosSpinBox.setReadOnly(True)
-        self.zPosSpinBox.setDecimals(3)
-        self.zPosSpinBox.setRange(-10000, 10000)
-        self.zPosSpinBox.setSuffix(" mm")
+        self.z_pos_spin_box = QtWidgets.QDoubleSpinBox(self)
+        self.z_pos_spin_box.setButtonSymbols(QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons)
+        self.z_pos_spin_box.setReadOnly(True)
+        self.z_pos_spin_box.setDecimals(3)
+        self.z_pos_spin_box.setRange(-10000, 10000)
+        self.z_pos_spin_box.setSuffix(" mm")
 
-        self.xCalibrationLineEdit = QtWidgets.QLineEdit(self)
-        self.xCalibrationLineEdit.setReadOnly(True)
+        self.x_calibration_line_edit = QtWidgets.QLineEdit(self)
+        self.x_calibration_line_edit.setReadOnly(True)
 
-        self.yCalibrationLineEdit = QtWidgets.QLineEdit(self)
-        self.yCalibrationLineEdit.setReadOnly(True)
+        self.y_calibration_line_edit = QtWidgets.QLineEdit(self)
+        self.y_calibration_line_edit.setReadOnly(True)
 
-        self.zCalibrationLineEdit = QtWidgets.QLineEdit(self)
-        self.zCalibrationLineEdit.setReadOnly(True)
+        self.z_calibration_line_edit = QtWidgets.QLineEdit(self)
+        self.z_calibration_line_edit.setReadOnly(True)
 
-        self.xyStepSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.xyStepSpinBox.setDecimals(3)
-        self.xyStepSpinBox.setRange(0, 10000)
-        self.xyStepSpinBox.setValue(1)
-        self.xyStepSpinBox.setSuffix(" mm")
+        self.xy_step_spin_box = QtWidgets.QDoubleSpinBox(self)
+        self.xy_step_spin_box.setDecimals(3)
+        self.xy_step_spin_box.setRange(0, 10000)
+        self.xy_step_spin_box.setValue(1)
+        self.xy_step_spin_box.setSuffix(" mm")
 
-        self.leftButton = QtWidgets.QPushButton("-X")
-        self.leftButton.clicked.connect(lambda: self.relativeMove(-abs(self.xyStepSpinBox.value()), 0, 0))
+        self.left_button = QtWidgets.QPushButton("-X")
+        self.left_button.clicked.connect(lambda: self.relative_move(-abs(self.xy_step_spin_box.value()), 0, 0))
 
-        self.rightButton = QtWidgets.QPushButton("+X")
-        self.rightButton.clicked.connect(lambda: self.relativeMove(+abs(self.xyStepSpinBox.value()), 0, 0))
+        self.right_button = QtWidgets.QPushButton("+X")
+        self.right_button.clicked.connect(lambda: self.relative_move(+abs(self.xy_step_spin_box.value()), 0, 0))
 
-        self.topButton = QtWidgets.QPushButton("+Y")
-        self.topButton.clicked.connect(lambda: self.relativeMove(0, +abs(self.xyStepSpinBox.value()), 0))
+        self.top_button = QtWidgets.QPushButton("+Y")
+        self.top_button.clicked.connect(lambda: self.relative_move(0, +abs(self.xy_step_spin_box.value()), 0))
 
-        self.bottomButton = QtWidgets.QPushButton("-Y")
-        self.bottomButton.clicked.connect(lambda: self.relativeMove(0, -abs(self.xyStepSpinBox.value()), 0))
+        self.bottom_button = QtWidgets.QPushButton("-Y")
+        self.bottom_button.clicked.connect(lambda: self.relative_move(0, -abs(self.xy_step_spin_box.value()), 0))
 
-        self.zStepSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.zStepSpinBox.setDecimals(3)
-        self.zStepSpinBox.setRange(0, 10000)
-        self.zStepSpinBox.setValue(1)
-        self.zStepSpinBox.setSuffix(" mm")
+        self.z_step_spin_box = QtWidgets.QDoubleSpinBox(self)
+        self.z_step_spin_box.setDecimals(3)
+        self.z_step_spin_box.setRange(0, 10000)
+        self.z_step_spin_box.setValue(1)
+        self.z_step_spin_box.setSuffix(" mm")
 
-        self.upButton = QtWidgets.QPushButton("+Z")
-        self.upButton.clicked.connect(lambda: self.relativeMove(0, 0, +abs(self.zStepSpinBox.value())))
+        self.up_button = QtWidgets.QPushButton("+Z")
+        self.up_button.clicked.connect(lambda: self.relative_move(0, 0, +abs(self.z_step_spin_box.value())))
 
-        self.downButton = QtWidgets.QPushButton("-Z")
-        self.downButton.clicked.connect(lambda: self.relativeMove(0, 0, -abs(self.zStepSpinBox.value())))
+        self.down_button = QtWidgets.QPushButton("-Z")
+        self.down_button.clicked.connect(lambda: self.relative_move(0, 0, -abs(self.z_step_spin_box.value())))
 
-        self.xRelSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.xRelSpinBox.setDecimals(3)
-        self.xRelSpinBox.setRange(-10000, 10000)
-        self.xRelSpinBox.setValue(0)
-        self.xRelSpinBox.setSuffix(" mm")
+        self.x_rel_spin_box = QtWidgets.QDoubleSpinBox(self)
+        self.x_rel_spin_box.setDecimals(3)
+        self.x_rel_spin_box.setRange(-10000, 10000)
+        self.x_rel_spin_box.setValue(0)
+        self.x_rel_spin_box.setSuffix(" mm")
 
-        self.yRelSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.yRelSpinBox.setDecimals(3)
-        self.yRelSpinBox.setRange(-10000, 10000)
-        self.yRelSpinBox.setValue(0)
-        self.yRelSpinBox.setSuffix(" mm")
+        self.y_rel_spin_box = QtWidgets.QDoubleSpinBox(self)
+        self.y_rel_spin_box.setDecimals(3)
+        self.y_rel_spin_box.setRange(-10000, 10000)
+        self.y_rel_spin_box.setValue(0)
+        self.y_rel_spin_box.setSuffix(" mm")
 
-        self.zRelSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.zRelSpinBox.setDecimals(3)
-        self.zRelSpinBox.setRange(-10000, 10000)
-        self.zRelSpinBox.setValue(0)
-        self.zRelSpinBox.setSuffix(" mm")
+        self.z_rel_spin_box = QtWidgets.QDoubleSpinBox(self)
+        self.z_rel_spin_box.setDecimals(3)
+        self.z_rel_spin_box.setRange(-10000, 10000)
+        self.z_rel_spin_box.setValue(0)
+        self.z_rel_spin_box.setSuffix(" mm")
 
-        self.moveRelButton = QtWidgets.QPushButton("Move Rel")
-        self.moveRelButton.clicked.connect(lambda: self.relativeMove(self.xRelSpinBox.value(), self.yRelSpinBox.value(), self.zRelSpinBox.value()))
+        self.move_rel_button = QtWidgets.QPushButton("Move Rel")
+        self.move_rel_button.clicked.connect(lambda: self.relative_move(self.x_rel_spin_box.value(), self.y_rel_spin_box.value(), self.z_rel_spin_box.value()))
 
-        self.xAbsSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.xAbsSpinBox.setDecimals(3)
-        self.xAbsSpinBox.setRange(0, 10000)
-        self.xAbsSpinBox.setValue(0)
-        self.xAbsSpinBox.setSuffix(" mm")
+        self.x_abs_spin_box = QtWidgets.QDoubleSpinBox(self)
+        self.x_abs_spin_box.setDecimals(3)
+        self.x_abs_spin_box.setRange(0, 10000)
+        self.x_abs_spin_box.setValue(0)
+        self.x_abs_spin_box.setSuffix(" mm")
 
-        self.yAbsSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.yAbsSpinBox.setDecimals(3)
-        self.yAbsSpinBox.setRange(0, 10000)
-        self.yAbsSpinBox.setValue(0)
-        self.yAbsSpinBox.setSuffix(" mm")
+        self.y_abs_spin_box = QtWidgets.QDoubleSpinBox(self)
+        self.y_abs_spin_box.setDecimals(3)
+        self.y_abs_spin_box.setRange(0, 10000)
+        self.y_abs_spin_box.setValue(0)
+        self.y_abs_spin_box.setSuffix(" mm")
 
-        self.zAbsSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.zAbsSpinBox.setDecimals(3)
-        self.zAbsSpinBox.setRange(0, 10000)
-        self.zAbsSpinBox.setValue(0)
-        self.zAbsSpinBox.setSuffix(" mm")
+        self.z_abs_spin_box = QtWidgets.QDoubleSpinBox(self)
+        self.z_abs_spin_box.setDecimals(3)
+        self.z_abs_spin_box.setRange(0, 10000)
+        self.z_abs_spin_box.setValue(0)
+        self.z_abs_spin_box.setSuffix(" mm")
 
-        self.moveAbsButton = QtWidgets.QPushButton("Move Abs")
-        self.moveAbsButton.clicked.connect(lambda: self.absoluteMove(self.xAbsSpinBox.value(), self.yAbsSpinBox.value(), self.zAbsSpinBox.value()))
+        self.move_abs_button = QtWidgets.QPushButton("Move Abs")
+        self.move_abs_button.clicked.connect(lambda: self.absolute_move(self.x_abs_spin_box.value(), self.y_abs_spin_box.value(), self.z_abs_spin_box.value()))
 
-        self.clearRelButton = QtWidgets.QPushButton("Clear")
-        self.clearRelButton.setMaximumWidth(48)
-        self.clearRelButton.clicked.connect(self.clearRelPos)
+        self.clear_rel_button = QtWidgets.QPushButton("Clear")
+        self.clear_rel_button.setMaximumWidth(48)
+        self.clear_rel_button.clicked.connect(self.clear_rel_pos)
 
-        self.clearAbsButton = QtWidgets.QPushButton("Clear")
-        self.clearAbsButton.setMaximumWidth(48)
-        self.clearAbsButton.clicked.connect(self.clearAbsPos)
+        self.clear_abs_button = QtWidgets.QPushButton("Clear")
+        self.clear_abs_button.setMaximumWidth(48)
+        self.clear_abs_button.clicked.connect(self.clear_abs_pos)
 
-        self.loadAbsButton = QtWidgets.QPushButton("Load")
-        self.loadAbsButton.setMaximumWidth(48)
-        self.loadAbsButton.clicked.connect(self.loadAbsPos)
+        self.load_abs_button = QtWidgets.QPushButton("Load")
+        self.load_abs_button.setMaximumWidth(48)
+        self.load_abs_button.clicked.connect(self.load_abs_pos)
 
-        self.stopButton = QtWidgets.QPushButton("Stop")
-        self.stopButton.setIcon(loadIcon("stop.svg"))
-        self.stopButton.clicked.connect(self.stopRequested)
+        self.stop_button = QtWidgets.QPushButton("Stop")
+        self.stop_button.setIcon(load_icon("stop.svg"))
+        self.stop_button.clicked.connect(self.stop_requested)
 
-        self.xCalButton = QtWidgets.QPushButton("Cal")
-        self.xCalButton.setMaximumWidth(54)
-        self.xCalButton.clicked.connect(lambda: self.calibrate(True, False, False))
-        self.xRmButton = QtWidgets.QPushButton("Rm")
-        self.xRmButton.setMaximumWidth(54)
-        self.xRmButton.clicked.connect(lambda: self.rangeMeasure(True, False, False))
-        self.yCalButton = QtWidgets.QPushButton("Cal")
-        self.yCalButton.setMaximumWidth(54)
-        self.yCalButton.clicked.connect(lambda: self.calibrate(False, True, False))
-        self.yRmButton = QtWidgets.QPushButton("Rm")
-        self.yRmButton.setMaximumWidth(54)
-        self.yRmButton.clicked.connect(lambda: self.rangeMeasure(False, True, False))
-        self.zCalButton = QtWidgets.QPushButton("Cal")
-        self.zCalButton.setMaximumWidth(54)
-        self.zCalButton.clicked.connect(lambda: self.calibrate(False, False, True))
-        self.zRmButton = QtWidgets.QPushButton("Rm")
-        self.zRmButton.setMaximumWidth(54)
-        self.zRmButton.clicked.connect(lambda: self.rangeMeasure(False, False, True))
+        self.x_cal_button = QtWidgets.QPushButton("Cal")
+        self.x_cal_button.setMaximumWidth(54)
+        self.x_cal_button.clicked.connect(lambda: self.calibrate(True, False, False))
+        self.x_rm_button = QtWidgets.QPushButton("Rm")
+        self.x_rm_button.setMaximumWidth(54)
+        self.x_rm_button.clicked.connect(lambda: self.range_measure(True, False, False))
+        self.y_cal_button = QtWidgets.QPushButton("Cal")
+        self.y_cal_button.setMaximumWidth(54)
+        self.y_cal_button.clicked.connect(lambda: self.calibrate(False, True, False))
+        self.y_rm_button = QtWidgets.QPushButton("Rm")
+        self.y_rm_button.setMaximumWidth(54)
+        self.y_rm_button.clicked.connect(lambda: self.range_measure(False, True, False))
+        self.z_cal_button = QtWidgets.QPushButton("Cal")
+        self.z_cal_button.setMaximumWidth(54)
+        self.z_cal_button.clicked.connect(lambda: self.calibrate(False, False, True))
+        self.z_rm_button = QtWidgets.QPushButton("Rm")
+        self.z_rm_button.setMaximumWidth(54)
+        self.z_rm_button.clicked.connect(lambda: self.range_measure(False, False, True))
 
-        self.updateIntervalSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.updateIntervalSpinBox.setDecimals(2)
-        self.updateIntervalSpinBox.setRange(0.01, 60.)
-        self.updateIntervalSpinBox.setValue(1)
-        self.updateIntervalSpinBox.setSingleStep(0.25)
-        self.updateIntervalSpinBox.setSuffix(" s")
-        self.updateIntervalSpinBox.valueChanged.connect(self.updateIntervalChanged)
+        self.update_interval_spin_box = QtWidgets.QDoubleSpinBox(self)
+        self.update_interval_spin_box.setDecimals(2)
+        self.update_interval_spin_box.setRange(0.01, 60.)
+        self.update_interval_spin_box.setValue(1)
+        self.update_interval_spin_box.setSingleStep(0.25)
+        self.update_interval_spin_box.setSuffix(" s")
+        self.update_interval_spin_box.valueChanged.connect(self.update_interval_changed)
 
-        positionLayout = QtWidgets.QGridLayout()
-        positionLayout.addWidget(QtWidgets.QLabel("X"), 0, 0)
-        positionLayout.addWidget(QtWidgets.QLabel("Y"), 0, 1)
-        positionLayout.addWidget(QtWidgets.QLabel("Z"), 0, 2)
-        positionLayout.addWidget(self.xPosSpinBox, 1, 0)
-        positionLayout.addWidget(self.yPosSpinBox, 1, 1)
-        positionLayout.addWidget(self.zPosSpinBox, 1, 2)
-        positionLayout.setColumnStretch(0, 1)
-        positionLayout.setColumnStretch(1, 1)
-        positionLayout.setColumnStretch(2, 1)
-        positionLayout.setColumnStretch(3, 1)
-        positionLayout.setColumnStretch(4, 1)
+        position_layout = QtWidgets.QGridLayout()
+        position_layout.addWidget(QtWidgets.QLabel("X"), 0, 0)
+        position_layout.addWidget(QtWidgets.QLabel("Y"), 0, 1)
+        position_layout.addWidget(QtWidgets.QLabel("Z"), 0, 2)
+        position_layout.addWidget(self.x_pos_spin_box, 1, 0)
+        position_layout.addWidget(self.y_pos_spin_box, 1, 1)
+        position_layout.addWidget(self.z_pos_spin_box, 1, 2)
+        position_layout.setColumnStretch(0, 1)
+        position_layout.setColumnStretch(1, 1)
+        position_layout.setColumnStretch(2, 1)
+        position_layout.setColumnStretch(3, 1)
+        position_layout.setColumnStretch(4, 1)
 
-        xCalibrationLayout = QtWidgets.QHBoxLayout()
-        xCalibrationLayout.addWidget(self.xCalButton)
-        xCalibrationLayout.addWidget(self.xRmButton)
+        x_calibration_layout = QtWidgets.QHBoxLayout()
+        x_calibration_layout.addWidget(self.x_cal_button)
+        x_calibration_layout.addWidget(self.x_rm_button)
 
-        yCalibrationLayout = QtWidgets.QHBoxLayout()
-        yCalibrationLayout.addWidget(self.yCalButton)
-        yCalibrationLayout.addWidget(self.yRmButton)
+        y_calibration_layout = QtWidgets.QHBoxLayout()
+        y_calibration_layout.addWidget(self.y_cal_button)
+        y_calibration_layout.addWidget(self.y_rm_button)
 
-        zCalibrationLayout = QtWidgets.QHBoxLayout()
-        zCalibrationLayout.addWidget(self.zCalButton)
-        zCalibrationLayout.addWidget(self.zRmButton)
+        z_calibration_layout = QtWidgets.QHBoxLayout()
+        z_calibration_layout.addWidget(self.z_cal_button)
+        z_calibration_layout.addWidget(self.z_rm_button)
 
-        calibrationLayout = QtWidgets.QGridLayout()
-        calibrationLayout.addWidget(QtWidgets.QLabel("X"), 0, 0)
-        calibrationLayout.addWidget(QtWidgets.QLabel("Y"), 0, 1)
-        calibrationLayout.addWidget(QtWidgets.QLabel("Z"), 0, 2)
-        calibrationLayout.addWidget(self.xCalibrationLineEdit, 1, 0)
-        calibrationLayout.addWidget(self.yCalibrationLineEdit, 1, 1)
-        calibrationLayout.addWidget(self.zCalibrationLineEdit, 1, 2)
-        calibrationLayout.addLayout(xCalibrationLayout, 2, 0)
-        calibrationLayout.addLayout(yCalibrationLayout, 2, 1)
-        calibrationLayout.addLayout(zCalibrationLayout, 2, 2)
-        calibrationLayout.setColumnStretch(0, 1)
-        calibrationLayout.setColumnStretch(1, 1)
-        calibrationLayout.setColumnStretch(2, 1)
-        calibrationLayout.setColumnStretch(3, 1)
-        calibrationLayout.setColumnStretch(4, 1)
+        calibration_layout = QtWidgets.QGridLayout()
+        calibration_layout.addWidget(QtWidgets.QLabel("X"), 0, 0)
+        calibration_layout.addWidget(QtWidgets.QLabel("Y"), 0, 1)
+        calibration_layout.addWidget(QtWidgets.QLabel("Z"), 0, 2)
+        calibration_layout.addWidget(self.x_calibration_line_edit, 1, 0)
+        calibration_layout.addWidget(self.y_calibration_line_edit, 1, 1)
+        calibration_layout.addWidget(self.z_calibration_line_edit, 1, 2)
+        calibration_layout.addLayout(x_calibration_layout, 2, 0)
+        calibration_layout.addLayout(y_calibration_layout, 2, 1)
+        calibration_layout.addLayout(z_calibration_layout, 2, 2)
+        calibration_layout.setColumnStretch(0, 1)
+        calibration_layout.setColumnStretch(1, 1)
+        calibration_layout.setColumnStretch(2, 1)
+        calibration_layout.setColumnStretch(3, 1)
+        calibration_layout.setColumnStretch(4, 1)
 
-        buttonLayout = QtWidgets.QGridLayout()
-        buttonLayout.addWidget(self.xyStepSpinBox, 1, 1)
-        buttonLayout.addWidget(self.leftButton, 1, 0)
-        buttonLayout.addWidget(self.rightButton, 1, 2)
-        buttonLayout.addWidget(self.topButton, 0, 1)
-        buttonLayout.addWidget(self.bottomButton, 2, 1)
+        button_layout = QtWidgets.QGridLayout()
+        button_layout.addWidget(self.xy_step_spin_box, 1, 1)
+        button_layout.addWidget(self.left_button, 1, 0)
+        button_layout.addWidget(self.right_button, 1, 2)
+        button_layout.addWidget(self.top_button, 0, 1)
+        button_layout.addWidget(self.bottom_button, 2, 1)
 
-        buttonLayout.addWidget(self.upButton, 0, 3)
-        buttonLayout.addWidget(self.zStepSpinBox, 1, 3)
-        buttonLayout.addWidget(self.downButton, 2, 3)
+        button_layout.addWidget(self.up_button, 0, 3)
+        button_layout.addWidget(self.z_step_spin_box, 1, 3)
+        button_layout.addWidget(self.down_button, 2, 3)
 
-        buttonLayout.addWidget(QtWidgets.QLabel("X"), 4, 0)
-        buttonLayout.addWidget(QtWidgets.QLabel("Y"), 4, 1)
-        buttonLayout.addWidget(QtWidgets.QLabel("Z"), 4, 2)
+        button_layout.addWidget(QtWidgets.QLabel("X"), 4, 0)
+        button_layout.addWidget(QtWidgets.QLabel("Y"), 4, 1)
+        button_layout.addWidget(QtWidgets.QLabel("Z"), 4, 2)
 
-        buttonLayout.addWidget(self.xRelSpinBox, 5, 0)
-        buttonLayout.addWidget(self.yRelSpinBox, 5, 1)
-        buttonLayout.addWidget(self.zRelSpinBox, 5, 2)
-        buttonLayout.addWidget(self.moveRelButton, 5, 3)
-        buttonLayout.addWidget(self.clearRelButton, 5, 4)
+        button_layout.addWidget(self.x_rel_spin_box, 5, 0)
+        button_layout.addWidget(self.y_rel_spin_box, 5, 1)
+        button_layout.addWidget(self.z_rel_spin_box, 5, 2)
+        button_layout.addWidget(self.move_rel_button, 5, 3)
+        button_layout.addWidget(self.clear_rel_button, 5, 4)
 
-        buttonLayout.addWidget(self.xAbsSpinBox, 6, 0)
-        buttonLayout.addWidget(self.yAbsSpinBox, 6, 1)
-        buttonLayout.addWidget(self.zAbsSpinBox, 6, 2)
-        buttonLayout.addWidget(self.moveAbsButton, 6, 3)
-        buttonLayout.addWidget(self.clearAbsButton, 6, 4)
-        buttonLayout.addWidget(self.loadAbsButton, 6, 6)
+        button_layout.addWidget(self.x_abs_spin_box, 6, 0)
+        button_layout.addWidget(self.y_abs_spin_box, 6, 1)
+        button_layout.addWidget(self.z_abs_spin_box, 6, 2)
+        button_layout.addWidget(self.move_abs_button, 6, 3)
+        button_layout.addWidget(self.clear_abs_button, 6, 4)
+        button_layout.addWidget(self.load_abs_button, 6, 6)
 
-        buttonLayout.addWidget(self.stopButton, 7, 3)
+        button_layout.addWidget(self.stop_button, 7, 3)
 
-        bottomLayout = QtWidgets.QGridLayout()
-        bottomLayout.addWidget(QtWidgets.QLabel("Update Interval"), 0, 0, 1, 4)
-        bottomLayout.addWidget(self.updateIntervalSpinBox, 1, 0)
+        buttom_layout = QtWidgets.QGridLayout()
+        buttom_layout.addWidget(QtWidgets.QLabel("Update Interval"), 0, 0, 1, 4)
+        buttom_layout.addWidget(self.update_interval_spin_box, 1, 0)
 
-        self.controllerLabel = QtWidgets.QLabel(self)
+        self.controller_label = QtWidgets.QLabel(self)
 
-        leftLayout = QtWidgets.QVBoxLayout()
-        leftLayout.addWidget(QtWidgets.QLabel("Controller"))
-        leftLayout.addWidget(self.controllerLabel)
-        leftLayout.addWidget(QtWidgets.QLabel("Position"))
-        leftLayout.addLayout(positionLayout)
-        leftLayout.addWidget(QtWidgets.QLabel("Calibration"))
-        leftLayout.addLayout(calibrationLayout)
-        leftLayout.addWidget(QtWidgets.QLabel("Movement"))
-        leftLayout.addLayout(buttonLayout)
-        leftLayout.addLayout(bottomLayout)
-        leftLayout.addStretch(1)
+        left_layout = QtWidgets.QVBoxLayout()
+        left_layout.addWidget(QtWidgets.QLabel("Controller"))
+        left_layout.addWidget(self.controller_label)
+        left_layout.addWidget(QtWidgets.QLabel("Position"))
+        left_layout.addLayout(position_layout)
+        left_layout.addWidget(QtWidgets.QLabel("Calibration"))
+        left_layout.addLayout(calibration_layout)
+        left_layout.addWidget(QtWidgets.QLabel("Movement"))
+        left_layout.addLayout(button_layout)
+        left_layout.addLayout(buttom_layout)
+        left_layout.addStretch(1)
 
         layout = QtWidgets.QHBoxLayout(self)
-        layout.addLayout(leftLayout)
+        layout.addLayout(left_layout)
         layout.addStretch(1)
 
-        self.controlWidgets: list[QtWidgets.QWidget] = [
-            self.leftButton,
-            self.rightButton,
-            self.topButton,
-            self.bottomButton,
-            self.upButton,
-            self.downButton,
-            self.moveRelButton,
-            self.moveAbsButton,
-            self.xCalButton,
-            self.yCalButton,
-            self.zCalButton,
-            self.xRmButton,
-            self.yRmButton,
-            self.zRmButton,
+        self.control_widgets: list[QtWidgets.QWidget] = [
+            self.left_button,
+            self.right_button,
+            self.top_button,
+            self.bottom_button,
+            self.up_button,
+            self.down_button,
+            self.move_rel_button,
+            self.move_abs_button,
+            self.x_cal_button,
+            self.y_cal_button,
+            self.z_cal_button,
+            self.x_rm_button,
+            self.y_rm_button,
+            self.z_rm_button,
         ]
 
-    def updateInterval(self) -> float:
-        return self.updateIntervalSpinBox.value()
+    def update_interval(self) -> float:
+        return self.update_interval_spin_box.value()
 
-    def setUpdateInterval(self, interval: float) -> None:
-        return self.updateIntervalSpinBox.setValue(interval)
+    def set_update_interval(self, interval: float) -> None:
+        return self.update_interval_spin_box.setValue(interval)
 
-    def clearRelPos(self) -> None:
-        self.xRelSpinBox.setValue(0)
-        self.yRelSpinBox.setValue(0)
-        self.zRelSpinBox.setValue(0)
+    def clear_rel_pos(self) -> None:
+        self.x_rel_spin_box.setValue(0)
+        self.y_rel_spin_box.setValue(0)
+        self.z_rel_spin_box.setValue(0)
 
-    def clearAbsPos(self) -> None:
-        self.xAbsSpinBox.setValue(0)
-        self.yAbsSpinBox.setValue(0)
-        self.zAbsSpinBox.setValue(0)
+    def clear_abs_pos(self) -> None:
+        self.x_abs_spin_box.setValue(0)
+        self.y_abs_spin_box.setValue(0)
+        self.z_abs_spin_box.setValue(0)
 
-    def loadAbsPos(self) -> None:
-        self.xAbsSpinBox.setValue(self.xPosSpinBox.value())
-        self.yAbsSpinBox.setValue(self.yPosSpinBox.value())
-        self.zAbsSpinBox.setValue(self.zPosSpinBox.value())
+    def load_abs_pos(self) -> None:
+        self.x_abs_spin_box.setValue(self.x_pos_spin_box.value())
+        self.y_abs_spin_box.setValue(self.y_pos_spin_box.value())
+        self.z_abs_spin_box.setValue(self.z_pos_spin_box.value())
 
-    def setController(self, info) -> None:
-        self.controllerLabel.setText(format(info))
+    def set_controller(self, info) -> None:
+        self.controller_label.setText(format(info))
 
-    def setTablePosition(self, x, y, z) -> None:
-        self.xPosSpinBox.setValue(x)
-        self.yPosSpinBox.setValue(y)
-        self.zPosSpinBox.setValue(z)
+    def set_table_position(self, x, y, z) -> None:
+        self.x_pos_spin_box.setValue(x)
+        self.y_pos_spin_box.setValue(y)
+        self.z_pos_spin_box.setValue(z)
 
-    def setTableCalibration(self, x, y, z) -> None:
+    def set_table_calibration(self, x, y, z) -> None:
         x, y, z = map(decode_calibration, [x, y, z])
-        self.xCalibrationLineEdit.setText(format(x))
-        self.yCalibrationLineEdit.setText(format(y))
-        self.zCalibrationLineEdit.setText(format(z))
+        self.x_calibration_line_edit.setText(format(x))
+        self.y_calibration_line_edit.setText(format(y))
+        self.z_calibration_line_edit.setText(format(z))
 
-    def enterDisconnected(self) -> None:
+    def enter_disconnected(self) -> None:
         self.setEnabled(False)
-        self.clearState()
+        self.clear_state()
 
-    def enterConnected(self) -> None:
+    def enter_connected(self) -> None:
         self.setEnabled(True)
-        for widget in self.controlWidgets:
+        for widget in self.control_widgets:
             widget.setEnabled(True)
 
-    def enterMoving(self) -> None:
-        for widget in self.controlWidgets:
+    def enter_moving(self) -> None:
+        for widget in self.control_widgets:
             widget.setEnabled(False)
 
-    def relativeMove(self, x, y, z) -> None:
-        self.moveRequested.emit()
-        self.relativeMoveRequested.emit(x, y, z)
+    def relative_move(self, x, y, z) -> None:
+        self.move_requested.emit()
+        self.relative_move_requested.emit(x, y, z)
 
-    def absoluteMove(self, x, y, z) -> None:
-        self.moveRequested.emit()
-        self.absoluteMoveRequested.emit(x, y, z)
+    def absolute_move(self, x, y, z) -> None:
+        self.move_requested.emit()
+        self.absolute_move_requested.emit(x, y, z)
 
     def calibrate(self, x, y, z) -> None:
-        self.moveRequested.emit()
-        self.calibrateRequested.emit(x, y, z)
-        if x: self.xCalibrationLineEdit.clear()
-        if y: self.yCalibrationLineEdit.clear()
-        if z: self.zCalibrationLineEdit.clear()
+        self.move_requested.emit()
+        self.calibrate_requested.emit(x, y, z)
+        if x:
+            self.x_calibration_line_edit.clear()
+        if y:
+            self.y_calibration_line_edit.clear()
+        if z:
+            self.z_calibration_line_edit.clear()
 
-    def rangeMeasure(self, x, y, z) -> None:
-        self.moveRequested.emit()
-        self.rangeMeasureRequested.emit(x, y, z)
-        if x: self.xCalibrationLineEdit.clear()
-        if y: self.yCalibrationLineEdit.clear()
-        if z: self.zCalibrationLineEdit.clear()
+    def range_measure(self, x, y, z) -> None:
+        self.move_requested.emit()
+        self.range_measure_requested.emit(x, y, z)
+        if x:
+            self.x_calibration_line_edit.clear()
+        if y:
+            self.y_calibration_line_edit.clear()
+        if z:
+            self.z_calibration_line_edit.clear()
 
-    def clearState(self) -> None:
-        self.controllerLabel.clear()
-        self.xPosSpinBox.clear()
-        self.yPosSpinBox.clear()
-        self.zPosSpinBox.clear()
-        self.xCalibrationLineEdit.clear()
-        self.yCalibrationLineEdit.clear()
-        self.zCalibrationLineEdit.clear()
+    def clear_state(self) -> None:
+        self.controller_label.clear()
+        self.x_pos_spin_box.clear()
+        self.y_pos_spin_box.clear()
+        self.z_pos_spin_box.clear()
+        self.x_calibration_line_edit.clear()
+        self.y_calibration_line_edit.clear()
+        self.z_calibration_line_edit.clear()

@@ -11,7 +11,7 @@ from .preferences import PreferencesDialog
 from .controller import TableController
 from .connection import ConnectionDialog
 from .dashboard import DashboardWidget
-from .utils import loadIcon, loadText
+from .utils import load_icon, load_text
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -19,168 +19,168 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
 
-        self.pluginManager = PluginManager()
+        self.plugin_manager = PluginManager()
 
-        self.tableController = TableController()
-        self.tableController.failed.connect(self.showException)
+        self.table_controller = TableController()
+        self.table_controller.failed.connect(self.show_exception)
 
-        self.appliances: dict = {}
+        self.appliances: dict[str, dict] = {}
 
-        self.quitAction = QtGui.QAction(self)
-        self.quitAction.setText("&Quit")
-        self.quitAction.setShortcut("Ctrl+Q")
-        self.quitAction.triggered.connect(self.close)
+        self.quit_action = QtGui.QAction(self)
+        self.quit_action.setText("&Quit")
+        self.quit_action.setShortcut("Ctrl+Q")
+        self.quit_action.triggered.connect(self.close)
 
-        self.preferencesAction = QtGui.QAction(self)
-        self.preferencesAction.setText("&Preferences")
-        self.preferencesAction.triggered.connect(self.showPreferences)
+        self.preferences_action = QtGui.QAction(self)
+        self.preferences_action.setText("&Preferences")
+        self.preferences_action.triggered.connect(self.show_preferences)
 
-        self.connectAction = QtGui.QAction(self)
-        self.connectAction.setText("&Connect")
-        self.connectAction.setIcon(loadIcon("connect.svg"))
-        self.connectAction.triggered.connect(self.connectTable)
+        self.connect_action = QtGui.QAction(self)
+        self.connect_action.setText("&Connect")
+        self.connect_action.setIcon(load_icon("connect.svg"))
+        self.connect_action.triggered.connect(self.connect_table)
 
-        self.disconnectAction = QtGui.QAction(self)
-        self.disconnectAction.setText("&Disconnect")
-        self.disconnectAction.setIcon(loadIcon("disconnect.svg"))
-        self.disconnectAction.triggered.connect(self.disconnectTable)
+        self.disconnect_action = QtGui.QAction(self)
+        self.disconnect_action.setText("&Disconnect")
+        self.disconnect_action.setIcon(load_icon("disconnect.svg"))
+        self.disconnect_action.triggered.connect(self.disconnect_table)
 
-        self.stopAction = QtGui.QAction(self)
-        self.stopAction.setText("&Stop")
-        self.stopAction.setIcon(loadIcon("stop.svg"))
-        self.stopAction.triggered.connect(self.requestStop)
+        self.stop_action = QtGui.QAction(self)
+        self.stop_action.setText("&Stop")
+        self.stop_action.setIcon(load_icon("stop.svg"))
+        self.stop_action.triggered.connect(self.request_stop)
 
-        self.aboutQtAction = QtGui.QAction(self)
-        self.aboutQtAction.setText("About &Qt")
-        self.aboutQtAction.triggered.connect(self.showAboutQt)
+        self.about_qt_action = QtGui.QAction(self)
+        self.about_qt_action.setText("About &Qt")
+        self.about_qt_action.triggered.connect(self.show_about_qt)
 
-        self.aboutAction = QtGui.QAction(self)
-        self.aboutAction.setText("&About")
-        self.aboutAction.triggered.connect(self.showAbout)
+        self.about_action = QtGui.QAction(self)
+        self.about_action.setText("&About")
+        self.about_action.triggered.connect(self.show_about)
 
-        self.fileMenu = self.menuBar().addMenu("&File")
-        self.fileMenu.addAction(self.quitAction)
+        self.file_menu = self.menuBar().addMenu("&File")
+        self.file_menu.addAction(self.quit_action)
 
-        self.editMenu = self.menuBar().addMenu("&Edit")
-        self.editMenu.addAction(self.preferencesAction)
+        self.edit_menu = self.menuBar().addMenu("&Edit")
+        self.edit_menu.addAction(self.preferences_action)
 
-        self.viewMenu = self.menuBar().addMenu("&View")
-        self.viewMenu.menuAction().setVisible(False)  # not used at default
+        self.view_menu = self.menuBar().addMenu("&View")
+        self.view_menu.menuAction().setVisible(False)  # not used at default
 
-        self.tableMenu = self.menuBar().addMenu("&Table")
-        self.tableMenu.addAction(self.connectAction)
-        self.tableMenu.addAction(self.disconnectAction)
-        self.tableMenu.addSeparator()
-        self.tableMenu.addAction(self.stopAction)
+        self.table_menu = self.menuBar().addMenu("&Table")
+        self.table_menu.addAction(self.connect_action)
+        self.table_menu.addAction(self.disconnect_action)
+        self.table_menu.addSeparator()
+        self.table_menu.addAction(self.stop_action)
 
-        self.helpMenu = self.menuBar().addMenu("&Help")
-        self.helpMenu.addAction(self.aboutQtAction)
-        self.helpMenu.addAction(self.aboutAction)
+        self.help_menu = self.menuBar().addMenu("&Help")
+        self.help_menu.addAction(self.about_qt_action)
+        self.help_menu.addAction(self.about_action)
 
         # Toolbars
 
-        self.mainToolBar = self.addToolBar("main")
-        self.mainToolBar.setObjectName("mainToolBar")
-        self.mainToolBar.addActions(self.tableMenu.actions())
+        self.main_tool_bar = self.addToolBar("main")
+        self.main_tool_bar.setObjectName("main_tool_bar")
+        self.main_tool_bar.addActions(self.table_menu.actions())
 
         # Central widget
 
         self.dashboard = DashboardWidget(self)
         self.setCentralWidget(self.dashboard)
 
-        self.dashboard.relativeMoveRequested.connect(self.tableController.moveRelative)
-        self.dashboard.absoluteMoveRequested.connect(self.tableController.moveAbsolute)
-        self.dashboard.calibrateRequested.connect(self.tableController.calibrate)
-        self.dashboard.rangeMeasureRequested.connect(self.tableController.rangeMeasure)
-        self.dashboard.stopRequested.connect(self.tableController.requestStop)
-        self.dashboard.updateIntervalChanged.connect(self.tableController.setUpdateInterval)
-        self.tableController.infoChanged.connect(self.dashboard.setController)
-        self.tableController.positionChanged.connect(self.dashboard.setTablePosition)
-        self.tableController.calibrationChanged.connect(self.dashboard.setTableCalibration)
+        self.dashboard.relative_move_requested.connect(self.table_controller.move_relative)
+        self.dashboard.absolute_move_requested.connect(self.table_controller.move_absolute)
+        self.dashboard.calibrate_requested.connect(self.table_controller.calibrate)
+        self.dashboard.range_measure_requested.connect(self.table_controller.range_measure)
+        self.dashboard.stop_requested.connect(self.table_controller.request_stop)
+        self.dashboard.update_interval_changed.connect(self.table_controller.set_update_interval)
+        self.table_controller.info_changed.connect(self.dashboard.set_controller)
+        self.table_controller.position_changed.connect(self.dashboard.set_table_position)
+        self.table_controller.calibration_changed.connect(self.dashboard.set_table_calibration)
 
         # Status bar
 
-        self.progressBar = QtWidgets.QProgressBar(self)
-        self.progressBar.setRange(0, 0)
-        self.progressBar.hide()
+        self.progress_bar = QtWidgets.QProgressBar(self)
+        self.progress_bar.setRange(0, 0)
+        self.progress_bar.hide()
 
-        self.statusBar().addPermanentWidget(self.progressBar)
+        self.statusBar().addPermanentWidget(self.progress_bar)
 
-        self.connectedState = QtStateMachine.QState()
-        self.connectedState.entered.connect(self.enterConnected)
+        self.connected_state = QtStateMachine.QState()
+        self.connected_state.entered.connect(self.enter_connected)
 
-        self.disconnectedState = QtStateMachine.QState()
-        self.disconnectedState.entered.connect(self.enterDisconnected)
+        self.disconnected_state = QtStateMachine.QState()
+        self.disconnected_state.entered.connect(self.enter_disconnected)
 
-        self.movingState = QtStateMachine.QState()
-        self.movingState.entered.connect(self.enterMoving)
+        self.moving_state = QtStateMachine.QState()
+        self.moving_state.entered.connect(self.enter_moving)
 
-        self.connectedState.addTransition(self.tableController.disconnected, self.disconnectedState)
-        self.disconnectedState.addTransition(self.tableController.connected, self.connectedState)
-        self.disconnectedState.addTransition(self.tableController.disconnected, self.disconnectedState)
-        self.connectedState.addTransition(self.tableController.movementStarted, self.movingState)
-        self.connectedState.addTransition(self.dashboard.moveRequested, self.movingState)
-        self.movingState.addTransition(self.tableController.movementFinished, self.connectedState)
-        self.movingState.addTransition(self.tableController.disconnected, self.disconnectedState)
+        self.connected_state.addTransition(self.table_controller.disconnected, self.disconnected_state)
+        self.disconnected_state.addTransition(self.table_controller.connected, self.connected_state)
+        self.disconnected_state.addTransition(self.table_controller.disconnected, self.disconnected_state)
+        self.connected_state.addTransition(self.table_controller.movement_started, self.moving_state)
+        self.connected_state.addTransition(self.dashboard.move_requested, self.moving_state)
+        self.moving_state.addTransition(self.table_controller.movement_finished, self.connected_state)
+        self.moving_state.addTransition(self.table_controller.disconnected, self.disconnected_state)
 
-        self.stateMachine = QtStateMachine.QStateMachine(self)
-        self.stateMachine.addState(self.connectedState)
-        self.stateMachine.addState(self.disconnectedState)
-        self.stateMachine.addState(self.movingState)
-        self.stateMachine.setInitialState(self.disconnectedState)
-        self.stateMachine.start()
+        self.state_machine = QtStateMachine.QStateMachine(self)
+        self.state_machine.addState(self.connected_state)
+        self.state_machine.addState(self.disconnected_state)
+        self.state_machine.addState(self.moving_state)
+        self.state_machine.setInitialState(self.disconnected_state)
+        self.state_machine.start()
 
-    def registerPlugin(self, plugin) -> None:
-        self.pluginManager.register_plugin(plugin)
+    def register_plugin(self, plugin) -> None:
+        self.plugin_manager.register_plugin(plugin)
 
-    def installPlugins(self) -> None:
-        self.pluginManager.dispatch("install", (self,))
+    def install_plugins(self) -> None:
+        self.plugin_manager.dispatch("install", (self,))
 
-    def uninstallPlugins(self) -> None:
-        self.pluginManager.dispatch("uninstall", (self,))
+    def uninstall_plugins(self) -> None:
+        self.plugin_manager.dispatch("uninstall", (self,))
 
-    def registerAppliance(self, name: str, appliance: dict) -> None:
+    def register_appliance(self, name: str, appliance: dict) -> None:
         self.appliances.update({name: appliance})
 
-    def readSettings(self) -> None:
+    def read_settings(self) -> None:
         settings = QtCore.QSettings()
-        self.pluginManager.dispatch("beforeReadSettings", (settings,))
+        self.plugin_manager.dispatch("before_read_settings", (settings,))
         settings.beginGroup("mainwindow")
         geometry: QtCore.QByteArray = settings.value("geometry", QtCore.QByteArray(), QtCore.QByteArray)  # type: ignore
         state: QtCore.QByteArray = settings.value("state", QtCore.QByteArray(), QtCore.QByteArray)  # type: ignore
-        updateInterval: float = settings.value("updateInterval", 1.0, float)  # type: ignore
+        updateInterval: float = settings.value("update_interval", 1.0, float)  # type: ignore
         settings.endGroup()
         self.restoreGeometry(geometry)
         self.restoreState(state)
-        self.dashboard.setUpdateInterval(updateInterval)
-        self.pluginManager.dispatch("afterReadSettings", (settings,))
+        self.dashboard.set_update_interval(updateInterval)
+        self.plugin_manager.dispatch("after_read_settings", (settings,))
 
-    def writeSettings(self) -> None:
+    def write_settings(self) -> None:
         settings = QtCore.QSettings()
-        self.pluginManager.dispatch("beforeWriteSettings", (settings,))
+        self.plugin_manager.dispatch("before_write_settings", (settings,))
         settings.beginGroup("mainwindow")
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("state", self.saveState())
-        settings.setValue("updateInterval", self.dashboard.updateInterval())
+        settings.setValue("update_interval", self.dashboard.update_interval())
         settings.endGroup()
-        self.pluginManager.dispatch("afterWriteSettings", (settings,))
+        self.plugin_manager.dispatch("after_write_settings", (settings,))
 
-    def showPreferences(self) -> None:
+    def show_preferences(self) -> None:
         settings = QtCore.QSettings()
         dialog = PreferencesDialog(settings, self)
-        self.pluginManager.dispatch("beforePreferences", (dialog,))
+        self.plugin_manager.dispatch("before_preferences", (dialog,))
         dialog.exec()
-        self.pluginManager.dispatch("afterPreferences", (dialog,))
+        self.plugin_manager.dispatch("after_preferences", (dialog,))
         if dialog.result() == dialog.DialogCode.Accepted:
             ...
 
-    def showAboutQt(self) -> None:
+    def show_about_qt(self) -> None:
         QtWidgets.QMessageBox.aboutQt(self, "About Qt")
 
-    def showAbout(self) -> None:
-        QtWidgets.QMessageBox.about(self, "About", loadText("about.txt").format(title=APP_TITLE, version=APP_VERSION))
+    def show_about(self) -> None:
+        QtWidgets.QMessageBox.about(self, "About", load_text("about.txt").format(title=APP_TITLE, version=APP_VERSION))
 
-    def showException(self, exc) -> None:
+    def show_exception(self, exc) -> None:
         details = "".join(traceback.format_tb(exc.__traceback__))
         dialog = QtWidgets.QMessageBox(self)
         dialog.setWindowTitle("Exception")
@@ -196,64 +196,64 @@ class MainWindow(QtWidgets.QMainWindow):
             layout.addItem(spacer, layout.rowCount(), 0, 1, layout.columnCount())
         dialog.exec()
 
-    def setupConnection(self) -> bool:
+    def setup_connection(self) -> bool:
         dialog = ConnectionDialog(self)
         for name, appliance in self.appliances.items():
-            dialog.addAppliance(name, appliance)
-        dialog.readSettings()
+            dialog.add_appliance(name, appliance)
+        dialog.read_settings()
         dialog.exec()
         if dialog.result() == dialog.DialogCode.Accepted:
-            dialog.writeSettings()
-            self.tableController.setAppliance(dialog.appliance())
+            dialog.write_settings()
+            self.table_controller.set_appliance(dialog.appliance())
         return dialog.result() == dialog.DialogCode.Accepted
 
-    def connectTable(self) -> None:
-        if self.setupConnection():
-            self.connectAction.setEnabled(False)
-            self.disconnectAction.setEnabled(False)
-            self.tableController.connectTable()
+    def connect_table(self) -> None:
+        if self.setup_connection():
+            self.connect_action.setEnabled(False)
+            self.disconnect_action.setEnabled(False)
+            self.table_controller.connect_table()
 
-    def disconnectTable(self) -> None:
-        self.connectAction.setEnabled(False)
-        self.disconnectAction.setEnabled(False)
-        self.tableController.disconnectTable()
+    def disconnect_table(self) -> None:
+        self.connect_action.setEnabled(False)
+        self.disconnect_action.setEnabled(False)
+        self.table_controller.disconnect_table()
 
-    def requestStop(self) -> None:
-        self.tableController.requestStop()
+    def request_stop(self) -> None:
+        self.table_controller.request_stop()
 
-    def enterDisconnected(self) -> None:
-        self.pluginManager.dispatch("beforeEnterDisconnected", (self,))
-        self.connectAction.setEnabled(True)
-        self.disconnectAction.setEnabled(False)
-        self.stopAction.setEnabled(False)
-        self.dashboard.enterDisconnected()
-        self.progressBar.hide()
-        self.pluginManager.dispatch("afterEnterDisconnected", (self,))
+    def enter_disconnected(self) -> None:
+        self.plugin_manager.dispatch("before_anter_disconnected", (self,))
+        self.connect_action.setEnabled(True)
+        self.disconnect_action.setEnabled(False)
+        self.stop_action.setEnabled(False)
+        self.dashboard.enter_disconnected()
+        self.progress_bar.hide()
+        self.plugin_manager.dispatch("after_enter_disconnected", (self,))
 
-    def enterConnected(self) -> None:
-        self.pluginManager.dispatch("beforeEnterConnected", (self,))
-        self.connectAction.setEnabled(False)
-        self.disconnectAction.setEnabled(True)
-        self.stopAction.setEnabled(True)
-        self.dashboard.enterConnected()
-        self.progressBar.hide()
-        self.pluginManager.dispatch("afterEnterConnected", (self,))
+    def enter_connected(self) -> None:
+        self.plugin_manager.dispatch("before_enter_connected", (self,))
+        self.connect_action.setEnabled(False)
+        self.disconnect_action.setEnabled(True)
+        self.stop_action.setEnabled(True)
+        self.dashboard.enter_connected()
+        self.progress_bar.hide()
+        self.plugin_manager.dispatch("after_enter_connected", (self,))
 
-    def enterMoving(self) -> None:
-        self.pluginManager.dispatch("beforeEnterMoving", (self,))
-        self.connectAction.setEnabled(False)
-        self.disconnectAction.setEnabled(False)
-        self.stopAction.setEnabled(True)
-        self.dashboard.enterMoving()
-        self.progressBar.show()
-        self.pluginManager.dispatch("afterEnterMoving", (self,))
+    def enter_moving(self) -> None:
+        self.plugin_manager.dispatch("before_enter_moving", (self,))
+        self.connect_action.setEnabled(False)
+        self.disconnect_action.setEnabled(False)
+        self.stop_action.setEnabled(True)
+        self.dashboard.enter_moving()
+        self.progress_bar.show()
+        self.plugin_manager.dispatch("after_enter_moving", (self,))
 
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
-        if not self.connectAction.isEnabled():
+        if not self.connect_action.isEnabled():
             result = QtWidgets.QMessageBox.question(self, "Quit?", "Close current connection?")
             if result != QtWidgets.QMessageBox.StandardButton.Yes:
                 event.ignore()
                 return
-            self.disconnectAction.trigger()
-        self.tableController.shutdown()
+            self.disconnect_action.trigger()
+        self.table_controller.shutdown()
         event.accept()
