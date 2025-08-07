@@ -1,19 +1,11 @@
-"""Generic SCPI interface for 3-axis table control software.
+"""Legacy TCP socket emulating HEPHY LabView XYZ table controller.
 
-Supported SCPI commands:
+Supported TCP commands:
 
-*IDN?                      application identity
-*CLS                       clears error stack
-[:]POSition?               get position
-[:]CALibration[:STATe]?    get calibration
-[:]MOVE[:STATe]?           is moving?
-[:]MOVE:RELative <POS>     3-axis relative move
-[:]MOVE:ABSolute <POS>     3-axis absolute move
-[:]MOVE:ABORT              abort a movement
-[:]SYStem:ERRor[:NEXT]?    next error on stack
-[:]SYStem:ERRor:COUNt?     size of error stack
-
-All SCPI commands are case insensitive (e.g. pos? is equal to POS?).
+PO? - Get Table Position and Status
+MA=x.xxx,x.xxx,x.xxx - Move absolute [X,Y,Z]
+MR=x.xxx,x - Move relative [StepWidth,Axis]
+??? - command help
 
 """
 
@@ -32,7 +24,7 @@ from table_control.gui.preferences import PreferencesDialog
 logger = logging.getLogger(__name__)
 
 
-class SCPISocketPlugin:
+class LegacySocketPlugin:
 
     def install(self, window) -> None:
         self._server: SocketServer | None = None
@@ -49,7 +41,7 @@ class SCPISocketPlugin:
         self.preferencesTab = PreferencesWidget()
         data = self.readSettings(dialog.settings)
         self.preferencesTab.fromDict(data)
-        dialog.tabWidget.addTab(self.preferencesTab, "SCPI")
+        dialog.tabWidget.addTab(self.preferencesTab, "Legacy")
 
     def afterPreferences(self, dialog: PreferencesDialog) -> None:
         if dialog.result() == dialog.DialogCode.Accepted:
@@ -61,22 +53,22 @@ class SCPISocketPlugin:
     def restartServer(self) -> None:
         data = self.readSettings(QtCore.QSettings())
         if self._server:
-            logger.info("SCPI socket: shutdown server...")
+            logger.info("legacy socket: shutdown server...")
             self._server.shutdown(timeout=60.0)
             self._server = None
         if data.get("enabled", False):
             hostname = data.get("hostname", "localhost")
-            port = data.get("port", 4000)
-            logger.info("SCPI socket: starting server on port %s...", port)
+            port = data.get("port", 4001)
+            logger.info("legacy socket: starting server on port %s...", port)
             self._server = SocketServer(self._tableController, hostname, port)
             thread = threading.Thread(target=self._server)
             thread.start()
 
     def readSettings(self, settings: QtCore.QSettings) -> dict:
-        return settings.value("plugins/scpi_socket", {})  # type: ignore
+        return settings.value("plugins/legacy_socket", {})  # type: ignore
 
     def writeSettings(self, settings: QtCore.QSettings, data: dict) -> None:
-        settings.setValue("plugins/scpi_socket", data)
+        settings.setValue("plugins/legacy_socket", data)
 
 
 class PreferencesWidget(QtWidgets.QWidget):
@@ -124,7 +116,7 @@ class PreferencesWidget(QtWidgets.QWidget):
 
     def fromDict(self, data: dict) -> None:
         self.setHostname(data.get("hostname", "localhost"))
-        self.setPort(data.get("port", 4000))
+        self.setPort(data.get("port", 4001))
         self.setServerEnabled(data.get("enabled", False))
 
 
@@ -134,7 +126,6 @@ class SocketServer:
         self.shutdown_requested = threading.Event()
         self.shutdown_finished = threading.Event()
         self.table = table
-        self.error_stack: list = []
         self.host: str = host
         self.port: int = port
         self.timeout: float = 1.0
@@ -151,7 +142,7 @@ class SocketServer:
                     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     s.bind((self.host, self.port))
                     s.listen()
-                    logger.info("SCPI socket: listening on: %s:%s", self.host, self.port)
+                    logger.info("Legacy socket: listening on: %s:%s", self.host, self.port)
 
                     while True:
                         ready, _, _ = select.select([s], [], [], self.timeout)
@@ -167,7 +158,7 @@ class SocketServer:
         self.shutdown_finished.set()
 
     def handle_client(self, conn, addr):
-        logger.info("SCPI socket: connection from: %s", addr)
+        logger.info("legacy socket: connection from: %s", addr)
         try:
             while True:
                 data = conn.recv(1024)
@@ -177,7 +168,7 @@ class SocketServer:
                 message = data.decode().strip()
                 response = None
 
-                logger.info("SCPI socket: received: %s", message)
+                logger.info("legacy socket: received: %s", message)
                 response = self.handle_message(message)
 
                 if response is not None:
@@ -189,68 +180,46 @@ class SocketServer:
             conn.close()
 
     def handle_message(self, message: str) -> str | None:
-        command = message.split()[0].lower()
+        command = message.split("=")[0]
+        error_response = "Command not valid !"
 
-        # *IDN?
-        if re.match(r"^\*idn\?$", command):
-            return f"{APP_TITLE} v{APP_VERSION}"
-
-        # *CLS
-        if re.match(r"^\*cls$", command):
-            self.error_stack.clear()
-            return None
-
-        # [:]POSition[:STATe]?
-        if re.match(r"^\:?pos(ition)?(\:stat(e)?)?\?$", command):
+        # PO?
+        if command == "PO?":
             x, y, z = self.table.position()
-            return f"{x:.3f} {y:.3f} {z:.3f}"
+            status = 0  # TODO!
+            return f"{x:.6f},{y:.6f},{z:.6f},{status:d}"
 
-        # [:]CALibration[:STATe]?
-        if re.match(r"^\:?cal(ibration)?(\:stat(e)?)?\?$", command):
-            x, y, z = self.table.calibration()
-            return f"{x:d} {y:d} {z:d}"
-
-        # [:]MOVE[:STATe]?
-        if re.match(r"^\:?move(\:stat(e)?)?\?$", command):
-            moving = self.table.isMoving()
-            return "1" if moving else "0"
-
-        # [:]MOVE:RELative X Y Z
-        if re.match(r"^\:?move\:rel(ative)?$", command):
+        # MR=DELTA,AXIS
+        if command == "MR":
             try:
-                _, dx, dy, dz = message.split()
-                self.table.moveRelative(float(dx), float(dy), float(dz))
+                _, args = message.split("=")
+                delta, axis = args.split(",")
+                if axis in ["1", "2", "3"]:
+                    vec = [0, 0, 0]
+                    vec[int(axis) - 1] = float(delta)
+                    self.table.moveRelative(vec[0], vec[1], vec[2])
             except Exception:
-                self.error_stack.append((101, "invalid attributes"))
-                return None
+                return error_response
             return None
 
-        # [:]MOVE:ABSolute X Y Z
-        if re.match(r"^\:?move\:abs(olute)?$", command):
+        # MA=X,Y,Z
+        if command == "MA":
             try:
-                _, x, y, z = message.split()
+                _, args = message.split("=")
+                x, y, z = args.split(",")
                 self.table.moveAbsolute(float(x), float(y), float(z))
             except Exception:
-                self.error_stack.append((101, "invalid attributes"))
-                return None
+                return error_response
             return None
 
-        # [:]MOVE:ABORT
-        if re.match(r"^\:?move\:abort$", command):
-            self.table.requestStop()
-            return None
+        # ???
+        if command == "???":
+            return "\n".join([
+                "Command list:",
+                "PO? - Get Table Position and Status",
+                "MA=x.xxx,x.xxx,x.xxx - Move absolute [X,Y,Z]",
+                "MR=x.xxx,x - Move relative [StepWidth,Axis]",
+                "??? - This command",
+            ])
 
-        # [:]SYStem:ERRor:COUNt?
-        if re.match(r"^\:?sys(t(em)?)?\:err(or)?\:coun(t)?\?$", command):
-            return format(len(self.error_stack))
-
-        # [:]SYStem:ERRor[:NEXT]?
-        if re.match(r"^\:?sys(t(em)?)?\:err(or)?(\:next)?\?$", command):
-            if self.error_stack:
-                code, msg = self.error_stack.pop(0)
-                return f"{code},\"{msg}\""
-            return "0,\"no error\""
-
-        self.error_stack.append((100, "invalid command"))
-
-        return None
+        return error_response

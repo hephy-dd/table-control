@@ -27,6 +27,20 @@ Make sure to enable and configure the SCPI socket in the application preferences
 
 All SCPI commands are case insensitive (e.g. `pos?` is equal to `POS?`).
 
+## Legacy TCP Socket
+
+The application can emulate a legacy TCP commands used with LabView.
+Make sure to enable and configure the TCP socket in the application preferences.
+
+|Command |Description |Example |
+|--------|------------|--------|
+|`PO?` | get position and status | `PO?` -> `0.000000,0.000000,0.000000,0` |
+|`MR=<DELTA>,<AXIS>` | 1-axis relative move (x=1, y=2, z=3) | `MR=4.200,1` |
+|`MA=<X>,<Y>,<Z>` | 3-axis absolute move | `MA=10.000,20.000,2.000` |
+|`???` | prints help | |
+
+All legacy TCP commands are case sensitive.
+
 ## Download
 
 See for pre-built Windows binaries in the [releases](https://github.com/hephy-dd/table-control/releases) section.
