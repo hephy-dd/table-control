@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from PySide6 import QtCore, QtWidgets
 
@@ -114,7 +115,7 @@ class ConnectionDialog(QtWidgets.QDialog):
         name = self.driver_combo_box.currentText()
         appliance = self.driver_combo_box.currentData()
         driver = appliance.get("driver")
-        resources = []
+        resources: list[dict[str, Any]] = []
         for index in range(appliance.get("resources", 0)):
             resources.append(self.get_resource(index))
         return Appliance(name, driver, resources)
