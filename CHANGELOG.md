@@ -11,7 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Legacy TCP socket plugin for backward compatibility (#3).
+- Legacy TCP socket plugin for backward compatibility (#2).
+- Joystick toggle action (#3).
 - Dummy controller module to simulate table movements.
 - Added `CONTRIBUTING.md` file for project contribution guidelines.
 
