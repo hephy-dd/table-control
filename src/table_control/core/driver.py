@@ -51,3 +51,7 @@ class Driver(ABC):
     @abstractmethod
     def range_measure(self, axes: Vector) -> None:
         ...
+
+    @abstractmethod
+    def enable_joystick(self, value: bool) -> None:
+        ...

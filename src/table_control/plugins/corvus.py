@@ -74,3 +74,6 @@ class CorvusDriver(Driver):
             self.resources[0].write(f"2 nrm")
         if z:
             self.resources[0].write(f"3 nrm")
+
+    def enable_joystick(self, value: bool) -> None:
+        self.resources[0].write(f"{value:d} joystick")

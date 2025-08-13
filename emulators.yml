@@ -1,0 +1,10 @@
+emulators:
+  corvus:
+    module: itk.corvustt
+    port: 12000
+  hydra1:
+    module: itk.hydra
+    port: 12001
+  hydra2:
+    module: itk.hydra
+    port: 12002

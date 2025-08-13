@@ -1,12 +1,13 @@
 import logging
 import threading
 import traceback
+import webbrowser
 
 from PySide6 import QtCore, QtGui, QtStateMachine, QtWidgets
 
 from ..core.pluginmanager import PluginManager
 
-from . import APP_TITLE, APP_VERSION
+from . import APP_TITLE, APP_VERSION, APP_CONTENTS_URL
 from .preferences import PreferencesDialog
 from .controller import TableController
 from .connection import ConnectionDialog
@@ -50,6 +51,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stop_action.setIcon(load_icon("stop.svg"))
         self.stop_action.triggered.connect(self.request_stop)
 
+        self.joystick_action = QtGui.QAction(self)
+        self.joystick_action.setCheckable(True)
+        self.joystick_action.setText("&Joystick")
+        self.joystick_action.setIcon(load_icon("joystick.svg"))
+        self.joystick_action.toggled.connect(self.request_enable_joystick)
+
+        self.contents_action = QtGui.QAction(self)
+        self.contents_action.setShortcut("F1")
+        self.contents_action.setText("&Contents")
+        self.contents_action.triggered.connect(self.show_contents)
+
         self.about_qt_action = QtGui.QAction(self)
         self.about_qt_action.setText("About &Qt")
         self.about_qt_action.triggered.connect(self.show_about_qt)
@@ -70,6 +82,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.table_menu = self.menuBar().addMenu("&Table")
         self.table_menu.addAction(self.connect_action)
         self.table_menu.addAction(self.disconnect_action)
+        self.table_menu.addSeparator()
+        self.table_menu.addAction(self.joystick_action)
         self.table_menu.addSeparator()
         self.table_menu.addAction(self.stop_action)
 
@@ -165,6 +179,7 @@ class MainWindow(QtWidgets.QMainWindow):
         settings.endGroup()
         self.plugin_manager.dispatch("after_write_settings", (settings,))
 
+    @QtCore.Slot()
     def show_preferences(self) -> None:
         settings = QtCore.QSettings()
         dialog = PreferencesDialog(settings, self)
@@ -174,12 +189,19 @@ class MainWindow(QtWidgets.QMainWindow):
         if dialog.result() == dialog.DialogCode.Accepted:
             ...
 
+    @QtCore.Slot()
+    def show_contents(self) -> None:
+        webbrowser.open(APP_CONTENTS_URL)
+
+    @QtCore.Slot()
     def show_about_qt(self) -> None:
         QtWidgets.QMessageBox.aboutQt(self, "About Qt")
 
+    @QtCore.Slot()
     def show_about(self) -> None:
         QtWidgets.QMessageBox.about(self, "About", load_text("about.txt").format(title=APP_TITLE, version=APP_VERSION))
 
+    @QtCore.Slot(Exception)
     def show_exception(self, exc) -> None:
         details = "".join(traceback.format_tb(exc.__traceback__))
         dialog = QtWidgets.QMessageBox(self)
@@ -207,47 +229,63 @@ class MainWindow(QtWidgets.QMainWindow):
             self.table_controller.set_appliance(dialog.appliance())
         return dialog.result() == dialog.DialogCode.Accepted
 
+    @QtCore.Slot()
     def connect_table(self) -> None:
         if self.setup_connection():
             self.connect_action.setEnabled(False)
             self.disconnect_action.setEnabled(False)
             self.table_controller.connect_table()
+            self.table_controller.request_enable_joystick(self.joystick_action.isChecked())  # reset
 
+    @QtCore.Slot()
     def disconnect_table(self) -> None:
         self.connect_action.setEnabled(False)
         self.disconnect_action.setEnabled(False)
         self.table_controller.disconnect_table()
 
+    @QtCore.Slot()
     def request_stop(self) -> None:
         self.table_controller.request_stop()
 
+    @QtCore.Slot(bool)
+    def request_enable_joystick(self, checked: bool) -> None:
+        self.table_controller.request_enable_joystick(checked)
+
+    @QtCore.Slot()
     def enter_disconnected(self) -> None:
         self.plugin_manager.dispatch("before_anter_disconnected", (self,))
         self.connect_action.setEnabled(True)
         self.disconnect_action.setEnabled(False)
         self.stop_action.setEnabled(False)
+        self.joystick_action.setEnabled(False)
         self.dashboard.enter_disconnected()
         self.progress_bar.hide()
         self.plugin_manager.dispatch("after_enter_disconnected", (self,))
 
+    @QtCore.Slot()
     def enter_connected(self) -> None:
         self.plugin_manager.dispatch("before_enter_connected", (self,))
         self.connect_action.setEnabled(False)
         self.disconnect_action.setEnabled(True)
         self.stop_action.setEnabled(True)
+        self.joystick_action.setChecked(False)  # reset
+        self.joystick_action.setEnabled(True)
         self.dashboard.enter_connected()
         self.progress_bar.hide()
         self.plugin_manager.dispatch("after_enter_connected", (self,))
 
+    @QtCore.Slot()
     def enter_moving(self) -> None:
         self.plugin_manager.dispatch("before_enter_moving", (self,))
         self.connect_action.setEnabled(False)
         self.disconnect_action.setEnabled(False)
         self.stop_action.setEnabled(True)
+        self.joystick_action.setEnabled(False)
         self.dashboard.enter_moving()
         self.progress_bar.show()
         self.plugin_manager.dispatch("after_enter_moving", (self,))
 
+    @QtCore.Slot(QtGui.QCloseEvent)
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         if not self.connect_action.isEnabled():
             result = QtWidgets.QMessageBox.question(self, "Quit?", "Close current connection?")
