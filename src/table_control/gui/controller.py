@@ -106,6 +106,9 @@ class TableController(QtCore.QObject):
     def request_stop(self) -> None:
         self.state.update({"stop_request": True})
 
+    def request_enable_joystick(self, enabled: bool) -> None:
+        self.messages.put("enable_joystick", enabled)
+
     def request_update(self) -> None:
         self.messages.put("update")
 
@@ -210,6 +213,9 @@ class MessageHandler:
                         elif msg.name == "range_measure":
                             x, y, z = msg.args
                             self.range_measure(driver, x, y, z)
+                        elif msg.name == "enable_joystick":
+                            enabled = msg.args[0]
+                            self.enable_joystick(driver, enabled)
                         elif msg.name == "update":
                             self.update_position(driver)
                             self.update_calibration(driver)
@@ -298,6 +304,9 @@ class MessageHandler:
         pos = driver.position()
         self.controller.update_position(pos)
         self.controller.update_moving(False)
+
+    def enable_joystick(self, driver, enable) -> None:
+        driver.enable_joystick(enable)
 
     def handle_stop(self, driver) -> None:
         stopRequest = self.controller.state.pop("stop_request", None)

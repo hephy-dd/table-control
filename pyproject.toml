@@ -15,7 +15,7 @@ requires-python = ">=3.13"
 dependencies = [
     "PySide6==6.9.1",
     "PyVISA==1.14.1",
-    "PyVISA-py==0.7.2"
+    "PyVISA-py==0.7.2",
 ]
 
 [project.urls]

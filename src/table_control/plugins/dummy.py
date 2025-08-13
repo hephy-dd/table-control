@@ -119,3 +119,6 @@ class DummyDriver(Driver):
 
     def range_measure(self, axes: Vector) -> None:
         x, y, z = axes  # no-op for now
+
+    def enable_joystick(self, value: bool) -> None:
+        ...

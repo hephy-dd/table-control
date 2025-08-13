@@ -81,3 +81,9 @@ class Hydra2xDriver(Driver):
             self.resources[0].write(f"2 nrm")
         if z:
             self.resources[1].write(f"1 nrm")
+
+    def enable_joystick(self, value: bool) -> None:
+        states = 0xF if value else 0x0
+        for resource in self.resources:
+            resource.write(f"{states:d} 1 setmanctrl")
+            resource.write(f"{states:d} 2 setmanctrl")

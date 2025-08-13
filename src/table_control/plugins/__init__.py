@@ -4,9 +4,9 @@ from .logger import LoggerPlugin
 from .scpi_socket import SCPISocketPlugin
 from .legacy_socket import LegacySocketPlugin
 
-from .appliances.dummy import DummyPlugin
-from .appliances.corvus import CorvusPlugin
-from .appliances.hydra2x import Hydra2xPlugin
+from .dummy import DummyPlugin
+from .corvus import CorvusPlugin
+from .hydra2x import Hydra2xPlugin
 
 
 def register_plugins(app) -> None:
