@@ -10,6 +10,8 @@ Supported SCPI commands:
 [:]MOVE:RELative <POS>     3-axis relative move
 [:]MOVE:ABSolute <POS>     3-axis absolute move
 [:]MOVE:ABORT              abort a movement
+[:]ZLIMit[:VALue]?         get Z limit value
+[:]ZLIMit:ENABled?         is Z limit enabled?
 [:]SYStem:ERRor[:NEXT]?    next error on stack
 [:]SYStem:ERRor:COUNt?     size of error stack
 
@@ -234,6 +236,16 @@ class SocketServer:
                 self.error_stack.append((101, "invalid attributes"))
                 return None
             return None
+
+        # [:]ZLIMit:ENAbled?
+        if re.match(r"^\:?zlim(it)?\:enab(led)?\?$", command):
+            enabled = self.table.z_limit_enabled
+            return "1" if enabled else "0"
+
+        # [:]ZLIMit[:VALue]?
+        if re.match(r"^\:?zlim(it)?(\:val(ue)?)?\?$", command):
+            value = self.table.z_limit
+            return f"{value:.6f}"
 
         # [:]MOVE:ABORT
         if re.match(r"^\:?move\:abort$", command):

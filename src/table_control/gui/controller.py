@@ -65,6 +65,7 @@ class MoveAbsoluteCommand(Command):
     x: float
     y: float
     z: float
+    z_limit: float | None
 
 
 @dataclass(slots=True, frozen=True)
@@ -116,6 +117,8 @@ class TableController(QtCore.QObject):
         super().__init__(parent)
         self.motion_timeout: float = 60.0
         self.update_interval: float = 1.0
+        self.z_limit_enabled: bool = False
+        self.z_limit: float = 0.0
         self.queue_timeout: float = 0.250
         self._state: TableState = TableState(
             is_moving=False,
@@ -180,7 +183,8 @@ class TableController(QtCore.QObject):
         self.send_command(MoveRelativeCommand(x, y, z))
 
     def move_absolute(self, x, y, z):
-        self.send_command(MoveAbsoluteCommand(x, y, z))
+        z_limit = self.z_limit if self.z_limit_enabled else None
+        self.send_command(MoveAbsoluteCommand(x, y, z, z_limit))
 
     def calibrate(self, x, y, z):
         self.send_command(CalibrateCommand(x, y, z))
@@ -190,6 +194,12 @@ class TableController(QtCore.QObject):
 
     def set_update_interval(self, interval: float) -> None:
         self.update_interval = float(interval)
+
+    def set_z_limit_enabled(self, enabled: bool) -> None:
+        self.z_limit_enabled = bool(enabled)
+
+    def set_z_limit(self, value: float) -> None:
+        self.z_limit = float(value)
 
     def is_stop_requested(self) -> bool:
         return self._stop_request.is_set()
@@ -281,8 +291,8 @@ class CommandHandler:
                             return
                         case MoveRelativeCommand(x=x, y=y, z=z):
                             self.move_relative(driver, x, y, z)
-                        case MoveAbsoluteCommand(x=x, y=y, z=z):
-                            self.move_absolute(driver, x, y, z)
+                        case MoveAbsoluteCommand(x=x, y=y, z=z, z_limit=z_limit):
+                            self.move_absolute(driver, x, y, z, z_limit)
                         case CalibrateCommand(x=x, y=y, z=z):
                             self.calibrate(driver, x, y, z)
                         case RangeMeasureCommand(x=x, y=y, z=z):
@@ -316,8 +326,17 @@ class CommandHandler:
     def move_relative(self, driver: Driver, x, y, z) -> None:
         self.perform_motion(driver, lambda: driver.move_relative(Vector(x, y, z)))
 
-    def move_absolute(self, driver: Driver, x, y, z) -> None:
-        self.perform_motion(driver, lambda: driver.move_absolute(Vector(x, y, z)))
+    def move_absolute(self, driver: Driver, x, y, z, z_limit) -> None:
+        if z_limit is not None:
+            pos = driver.position()
+            if pos.z > z_limit:
+                z_diff = abs(pos.z - z_limit)
+                self.perform_motion(driver, lambda: driver.move_relative(Vector(0, 0, -z_diff)))
+            pos = driver.position()
+            self.perform_motion(driver, lambda: driver.move_absolute(Vector(x, y, pos.z)))
+            self.perform_motion(driver, lambda: driver.move_absolute(Vector(x, y, z)))
+        else:
+            self.perform_motion(driver, lambda: driver.move_absolute(Vector(x, y, z)))
 
     def calibrate(self, driver: Driver, x, y, z) -> None:
         self.perform_motion(driver, lambda: driver.calibrate(Vector(x, y, z)))

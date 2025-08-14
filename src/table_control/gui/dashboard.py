@@ -16,6 +16,8 @@ class DashboardWidget(QtWidgets.QWidget):
     range_measure_requested = QtCore.Signal(bool ,bool, bool)
     stop_requested = QtCore.Signal()
     update_interval_changed = QtCore.Signal(float)
+    z_limit_enabled_changed = QtCore.Signal(bool)
+    z_limit_changed = QtCore.Signal(float)
 
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
@@ -165,6 +167,16 @@ class DashboardWidget(QtWidgets.QWidget):
         self.update_interval_spin_box.setSuffix(" s")
         self.update_interval_spin_box.valueChanged.connect(self.update_interval_changed)
 
+        self.z_limit_enabled_check_box = QtWidgets.QCheckBox(self)
+        self.z_limit_enabled_check_box.setText("Move Abs Z-Limit")
+        self.z_limit_enabled_check_box.toggled.connect(self.z_limit_enabled_changed)
+
+        self.z_limit_spin_box = QtWidgets.QDoubleSpinBox(self)
+        self.z_limit_spin_box.setDecimals(3)
+        self.z_limit_spin_box.setRange(-10000, 10000)
+        self.z_limit_spin_box.setSuffix(" mm")
+        self.z_limit_spin_box.valueChanged.connect(self.z_limit_changed)
+
         position_layout = QtWidgets.QGridLayout()
         position_layout.addWidget(QtWidgets.QLabel("X"), 0, 0)
         position_layout.addWidget(QtWidgets.QLabel("Y"), 0, 1)
@@ -237,8 +249,10 @@ class DashboardWidget(QtWidgets.QWidget):
         button_layout.addWidget(self.stop_button, 7, 3)
 
         buttom_layout = QtWidgets.QGridLayout()
-        buttom_layout.addWidget(QtWidgets.QLabel("Update Interval"), 0, 0, 1, 4)
+        buttom_layout.addWidget(QtWidgets.QLabel("Update Interval"), 0, 0, 1, 1)
         buttom_layout.addWidget(self.update_interval_spin_box, 1, 0)
+        buttom_layout.addWidget(self.z_limit_enabled_check_box, 0, 1, 1, 4)
+        buttom_layout.addWidget(self.z_limit_spin_box, 1, 1)
 
         self.controller_label = QtWidgets.QLabel(self)
 
@@ -273,6 +287,8 @@ class DashboardWidget(QtWidgets.QWidget):
             self.x_rm_button,
             self.y_rm_button,
             self.z_rm_button,
+            self.z_limit_enabled_check_box,
+            self.z_limit_spin_box,
         ]
 
     def update_interval(self) -> float:
@@ -280,6 +296,18 @@ class DashboardWidget(QtWidgets.QWidget):
 
     def set_update_interval(self, interval: float) -> None:
         return self.update_interval_spin_box.setValue(interval)
+
+    def z_limit_enabled(self) -> float:
+        return self.z_limit_enabled_check_box.isChecked()
+
+    def set_z_limit_enabled(self, enabled: bool) -> None:
+        return self.z_limit_enabled_check_box.setChecked(enabled)
+
+    def z_limit(self) -> float:
+        return self.z_limit_spin_box.value()
+
+    def set_z_limit(self, value: float) -> None:
+        return self.z_limit_spin_box.setValue(value)
 
     def clear_rel_pos(self) -> None:
         self.x_rel_spin_box.setValue(0)
