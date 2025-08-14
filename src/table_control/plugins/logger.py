@@ -12,14 +12,14 @@ class LoggerPlugin:
 
     def install(self, window) -> None:
         self.logger = logging.getLogger()
-        self.log_widget = LogWidget()
-        self.log_widget.add_logger(self.logger)
-        self.log_widget.set_level(logging.DEBUG)
+        self.logging_widget = LoggingWidget()
+        self.logging_widget.add_logger(self.logger)
+        self.logging_widget.set_level(logging.DEBUG)
 
         self.logging_dock_widget = QtWidgets.QDockWidget("Logging")
         self.logging_dock_widget.setObjectName("logging_dock_widget")
         self.logging_dock_widget.setAllowedAreas(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea)
-        self.logging_dock_widget.setWidget(self.log_widget)
+        self.logging_dock_widget.setWidget(self.logging_widget)
         self.logging_dock_widget.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetClosable)
         self.logging_dock_widget.hide()
         window.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.logging_dock_widget)
@@ -32,8 +32,8 @@ class LoggerPlugin:
 
     def uninstall(self, window) -> None:
         window.view_menu.removeAction(self.logging_action)
-        self.log_widget.remove_logger(self.logger)
-        self.log_widget.shutdown()
+        self.logging_widget.remove_logger(self.logger)
+        self.logging_widget.shutdown()
 
 
 class Handler(logging.Handler):
@@ -63,7 +63,7 @@ class RecordsQueue:
             return records
 
 
-class LogWidget(QtWidgets.QTextEdit):
+class LoggingWidget(QtWidgets.QTextEdit):
 
     MAX_ENTRIES: int = 4096
     """Maximum number of visible log entries."""
