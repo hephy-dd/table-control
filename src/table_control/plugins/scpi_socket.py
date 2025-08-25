@@ -10,6 +10,8 @@ Supported SCPI commands:
 [:]MOVE:RELative <POS>     3-axis relative move
 [:]MOVE:ABSolute <POS>     3-axis absolute move
 [:]MOVE:ABORT              abort a movement
+[:]ZLIMit[:VALue]?         get Z limit value
+[:]ZLIMit:ENABled?         is Z limit enabled?
 [:]SYStem:ERRor[:NEXT]?    next error on stack
 [:]SYStem:ERRor:COUNt?     size of error stack
 
@@ -35,39 +37,41 @@ logger = logging.getLogger(__name__)
 class SCPISocketPlugin:
 
     def install(self, window) -> None:
-        self._server: SocketServer | None = None
-        self._tableController = window.table_controller
+        self.settings = window.settings
+        self.socket_server: SocketServer | None = None
+        self.table_controller = window.table_controller
         self.restart_server()
 
     def uninstall(self, window) -> None:
-        if self._server:
-            self._server.shutdown(timeout=60.0)
+        if self.socket_server:
+            self.socket_server.shutdown(timeout=60.0)
+        logger.info("uninstalled %r", type(self).__name__)
 
     def before_preferences(self, dialog: PreferencesDialog) -> None:
         self.preferences_tab = PreferencesWidget()
-        data = self.read_settings(dialog.settings)
+        data = self.read_settings(self.settings)
         self.preferences_tab.from_dict(data)
         dialog.tab_widget.addTab(self.preferences_tab, "SCPI")
 
     def after_preferences(self, dialog: PreferencesDialog) -> None:
         if dialog.result() == dialog.DialogCode.Accepted:
-            self.write_settings(dialog.settings, self.preferences_tab.to_dict())
+            self.write_settings(self.settings, self.preferences_tab.to_dict())
             self.restart_server()
         index = dialog.tab_widget.indexOf(self.preferences_tab)
         dialog.tab_widget.removeTab(index)
 
     def restart_server(self) -> None:
         data = self.read_settings(QtCore.QSettings())
-        if self._server:
+        if self.socket_server:
             logger.info("SCPI socket: shutdown server...")
-            self._server.shutdown(timeout=60.0)
-            self._server = None
+            self.socket_server.shutdown(timeout=60.0)
+            self.socket_server = None
         if data.get("enabled", False):
             hostname = data.get("hostname", "localhost")
             port = data.get("port", 4000)
             logger.info("SCPI socket: starting server on port %s...", port)
-            self._server = SocketServer(self._tableController, hostname, port)
-            thread = threading.Thread(target=self._server)
+            self.socket_server = SocketServer(self.table_controller, hostname, port)
+            thread = threading.Thread(target=self.socket_server)
             thread.start()
 
     def read_settings(self, settings: QtCore.QSettings) -> dict:
@@ -227,6 +231,16 @@ class SocketServer:
                 self.error_stack.append((101, "invalid attributes"))
                 return None
             return None
+
+        # [:]ZLIMit:ENAbled?
+        if re.match(r"^\:?zlim(it)?\:enab(led)?\?$", command):
+            enabled = self.table.z_limit_enabled
+            return "1" if enabled else "0"
+
+        # [:]ZLIMit[:VALue]?
+        if re.match(r"^\:?zlim(it)?(\:val(ue)?)?\?$", command):
+            value = self.table.z_limit
+            return f"{value:.6f}"
 
         # [:]MOVE:ABORT
         if re.match(r"^\:?move\:abort$", command):

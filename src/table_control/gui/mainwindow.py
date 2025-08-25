@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import threading
 import traceback
@@ -19,6 +20,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
+
+        self.settings = QtCore.QSettings()
 
         self.plugin_manager = PluginManager()
 
@@ -88,6 +91,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.table_menu.addAction(self.stop_action)
 
         self.help_menu = self.menuBar().addMenu("&Help")
+        self.help_menu.addAction(self.contents_action)
+        self.help_menu.addSeparator()
         self.help_menu.addAction(self.about_qt_action)
         self.help_menu.addAction(self.about_action)
 
@@ -108,6 +113,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dashboard.range_measure_requested.connect(self.table_controller.range_measure)
         self.dashboard.stop_requested.connect(self.table_controller.request_stop)
         self.dashboard.update_interval_changed.connect(self.table_controller.set_update_interval)
+        self.dashboard.z_limit_enabled_changed.connect(self.table_controller.set_z_limit_enabled)
+        self.dashboard.z_limit_changed.connect(self.table_controller.set_z_limit)
         self.table_controller.info_changed.connect(self.dashboard.set_controller)
         self.table_controller.position_changed.connect(self.dashboard.set_table_position)
         self.table_controller.calibration_changed.connect(self.dashboard.set_table_calibration)
@@ -144,6 +151,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.state_machine.setInitialState(self.disconnected_state)
         self.state_machine.start()
 
+        self.sync_controller()
+
     def register_plugin(self, plugin) -> None:
         self.plugin_manager.register_plugin(plugin)
 
@@ -157,37 +166,47 @@ class MainWindow(QtWidgets.QMainWindow):
         self.appliances.update({name: appliance})
 
     def read_settings(self) -> None:
-        settings = QtCore.QSettings()
+        settings = self.settings
         self.plugin_manager.dispatch("before_read_settings", (settings,))
         settings.beginGroup("mainwindow")
         geometry: QtCore.QByteArray = settings.value("geometry", QtCore.QByteArray(), QtCore.QByteArray)  # type: ignore
         state: QtCore.QByteArray = settings.value("state", QtCore.QByteArray(), QtCore.QByteArray)  # type: ignore
         updateInterval: float = settings.value("update_interval", 1.0, float)  # type: ignore
+        z_limit_enabled: bool = settings.value("z_limit_enabled", False, bool)  # type: ignore
+        z_limit: float = settings.value("z_limit", 0.0, float)  # type: ignore
         settings.endGroup()
         self.restoreGeometry(geometry)
         self.restoreState(state)
         self.dashboard.set_update_interval(updateInterval)
+        self.dashboard.set_z_limit_enabled(z_limit_enabled)
+        self.dashboard.set_z_limit(z_limit)
         self.plugin_manager.dispatch("after_read_settings", (settings,))
 
     def write_settings(self) -> None:
-        settings = QtCore.QSettings()
+        settings = self.settings
         self.plugin_manager.dispatch("before_write_settings", (settings,))
         settings.beginGroup("mainwindow")
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("state", self.saveState())
         settings.setValue("update_interval", self.dashboard.update_interval())
+        settings.setValue("z_limit_enabled", self.dashboard.z_limit_enabled())
+        settings.setValue("z_limit", self.dashboard.z_limit())
         settings.endGroup()
         self.plugin_manager.dispatch("after_write_settings", (settings,))
 
+    def sync_controller(self) -> None:
+        self.table_controller.update_interval = self.dashboard.update_interval()
+        self.table_controller.z_limit_enabled = self.dashboard.z_limit_enabled()
+        self.table_controller.z_limit = self.dashboard.z_limit()
+
     @QtCore.Slot()
     def show_preferences(self) -> None:
-        settings = QtCore.QSettings()
-        dialog = PreferencesDialog(settings, self)
+        dialog = PreferencesDialog(self)
+        dialog.read_settings(self.settings)
         self.plugin_manager.dispatch("before_preferences", (dialog,))
         dialog.exec()
         self.plugin_manager.dispatch("after_preferences", (dialog,))
-        if dialog.result() == dialog.DialogCode.Accepted:
-            ...
+        dialog.write_settings(self.settings)
 
     @QtCore.Slot()
     def show_contents(self) -> None:
@@ -253,7 +272,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.Slot()
     def enter_disconnected(self) -> None:
-        self.plugin_manager.dispatch("before_anter_disconnected", (self,))
+        self.plugin_manager.dispatch("before_enter_disconnected", (self,))
         self.connect_action.setEnabled(True)
         self.disconnect_action.setEnabled(False)
         self.stop_action.setEnabled(False)

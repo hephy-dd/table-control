@@ -27,39 +27,41 @@ logger = logging.getLogger(__name__)
 class LegacySocketPlugin:
 
     def install(self, window) -> None:
-        self._server: SocketServer | None = None
-        self._tableController = window.table_controller
+        self.settings = window.settings
+        self.socket_server: SocketServer | None = None
+        self.table_controller = window.table_controller
         self.restartServer()
 
     def uninstall(self, window) -> None:
-        if self._server:
-            self._server.shutdown(timeout=60.0)
+        if self.socket_server:
+            self.socket_server.shutdown(timeout=60.0)
+        logger.info("uninstalled %r", type(self).__name__)
 
     def before_preferences(self, dialog: PreferencesDialog) -> None:
         self.preferences_tab = PreferencesWidget()
-        data = self.read_settings(dialog.settings)
+        data = self.read_settings(self.settings)
         self.preferences_tab.from_dict(data)
         dialog.tab_widget.addTab(self.preferences_tab, "Legacy")
 
     def after_preferences(self, dialog: PreferencesDialog) -> None:
         if dialog.result() == dialog.DialogCode.Accepted:
-            self.write_settings(dialog.settings, self.preferences_tab.to_dict())
+            self.write_settings(self.settings, self.preferences_tab.to_dict())
             self.restartServer()
         index = dialog.tab_widget.indexOf(self.preferences_tab)
         dialog.tab_widget.removeTab(index)
 
     def restartServer(self) -> None:
         data = self.read_settings(QtCore.QSettings())
-        if self._server:
+        if self.socket_server:
             logger.info("legacy socket: shutdown server...")
-            self._server.shutdown(timeout=60.0)
-            self._server = None
+            self.socket_server.shutdown(timeout=60.0)
+            self.socket_server = None
         if data.get("enabled", False):
             hostname = data.get("hostname", "localhost")
             port = data.get("port", 4001)
             logger.info("legacy socket: starting server on port %s...", port)
-            self._server = SocketServer(self._tableController, hostname, port)
-            thread = threading.Thread(target=self._server)
+            self.socket_server = SocketServer(self.table_controller, hostname, port)
+            thread = threading.Thread(target=self.socket_server)
             thread.start()
 
     def read_settings(self, settings: QtCore.QSettings) -> dict:
