@@ -41,7 +41,6 @@ class SCPISocketPlugin:
         self.socket_server: SocketServer | None = None
         self.table_controller = window.table_controller
         self.restart_server()
-        logger.info("installed %r", type(self).__name__)
 
     def uninstall(self, window) -> None:
         if self.socket_server:
@@ -93,7 +92,7 @@ class PreferencesWidget(QtWidgets.QWidget):
         self.hostname_line_edit = QtWidgets.QLineEdit(self)
 
         self.port_spin_box = QtWidgets.QSpinBox(self)
-        self.port_spin_box.setRange(0, 99999)
+        self.port_spin_box.setRange(0, 65535)
 
         layout = QtWidgets.QFormLayout(self)
         layout.addRow(self.enabled_check_box)
@@ -172,20 +171,15 @@ class SocketServer:
     def handle_client(self, conn, addr):
         logger.info("SCPI socket: connection from: %s", addr)
         try:
-            while True:
-                data = conn.recv(1024)
-                if not data:
-                    break  # Connection closed by the client
-
-                message = data.decode().strip()
-                response = None
-
-                logger.info("SCPI socket: received: %s", message)
-                response = self.handle_message(message)
-
-                if response is not None:
-                    conn.sendall(f"{response}\n".encode())
-
+            with conn.makefile("r") as f:
+                for raw_line in f:
+                    line = raw_line.rstrip()
+                    if not line:
+                        continue
+                    logger.info("SCPI socket: received: %s", line)
+                    resp = self.handle_message(line)
+                    if resp is not None:
+                        conn.sendall(f"{resp}\n".encode())
         except Exception as exc:
             logger.exception(exc)
         finally:
