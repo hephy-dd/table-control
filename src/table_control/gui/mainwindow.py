@@ -21,6 +21,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
 
+        self.settings = QtCore.QSettings()
+
         self.plugin_manager = PluginManager()
 
         self.table_controller = TableController()
@@ -164,7 +166,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.appliances.update({name: appliance})
 
     def read_settings(self) -> None:
-        settings = QtCore.QSettings()
+        settings = self.settings
         self.plugin_manager.dispatch("before_read_settings", (settings,))
         settings.beginGroup("mainwindow")
         geometry: QtCore.QByteArray = settings.value("geometry", QtCore.QByteArray(), QtCore.QByteArray)  # type: ignore
@@ -181,7 +183,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plugin_manager.dispatch("after_read_settings", (settings,))
 
     def write_settings(self) -> None:
-        settings = QtCore.QSettings()
+        settings = self.settings
         self.plugin_manager.dispatch("before_write_settings", (settings,))
         settings.beginGroup("mainwindow")
         settings.setValue("geometry", self.saveGeometry())
@@ -199,13 +201,12 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.Slot()
     def show_preferences(self) -> None:
-        settings = QtCore.QSettings()
-        dialog = PreferencesDialog(settings, self)
+        dialog = PreferencesDialog(self)
+        dialog.read_settings(self.settings)
         self.plugin_manager.dispatch("before_preferences", (dialog,))
         dialog.exec()
         self.plugin_manager.dispatch("after_preferences", (dialog,))
-        if dialog.result() == dialog.DialogCode.Accepted:
-            ...
+        dialog.write_settings(self.settings)
 
     @QtCore.Slot()
     def show_contents(self) -> None:
