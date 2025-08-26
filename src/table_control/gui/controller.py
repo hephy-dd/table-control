@@ -15,6 +15,12 @@ from ..core.resource import Resource
 logger = logging.getLogger(__name__)
 
 
+class AbortRequest(Exception): ...
+
+
+class CalibrationError(Exception): ...
+
+
 def poll_interval(steps: Sequence[float]):
     for step in steps:
         yield step
@@ -167,16 +173,14 @@ class TableController(QtCore.QObject):
 
     def request_stop(self) -> None:
         self._stop_request.set()
-        # Clear the queue
-        with contextlib.suppress(Exception):
-            while True:
-                self._command_queue.get_nowait()
 
     def request_enable_joystick(self, enabled: bool) -> None:
         self.send_command(EnableJoystickCommand(enabled))
 
     def request_update(self) -> None:
         self.send_command(QueryPositionCommand())
+
+    def request_calibration_state(self) -> None:
         self.send_command(QueryCalibrationCommand())
 
     def move_relative(self, x, y, z):
@@ -256,7 +260,7 @@ class TableController(QtCore.QObject):
                 self._command_handler.handle_commands()
             except Exception as exc:
                 logger.exception(exc)
-            time.sleep(1)  # throttle
+            time.sleep(0.25)  # throttle
 
 
 class CommandHandler:
@@ -284,30 +288,43 @@ class CommandHandler:
                 self.controller.info_changed.emit(format(info))
                 t0 = time.monotonic()
                 while self.controller.is_running():
-                    self.handle_stop(driver)
-                    cmd = self.controller.next_command(timeout=self.controller.queue_timeout)
-                    match cmd:
-                        case DisconnectCommand():
-                            return
-                        case MoveRelativeCommand(x=x, y=y, z=z):
-                            self.move_relative(driver, x, y, z)
-                        case MoveAbsoluteCommand(x=x, y=y, z=z, z_limit=z_limit):
-                            self.move_absolute(driver, x, y, z, z_limit)
-                        case CalibrateCommand(x=x, y=y, z=z):
-                            self.calibrate(driver, x, y, z)
-                        case RangeMeasureCommand(x=x, y=y, z=z):
-                            self.range_measure(driver, x, y, z)
-                        case EnableJoystickCommand(enabled=enabled):
-                            self.enable_joystick(driver, enabled)
-                        case QueryPositionCommand():
-                            self.update_position(driver)
-                        case QueryCalibrationCommand():
-                            self.update_calibration(driver)
-                        case _:
-                            # Auto insert update request in regular intervals
-                            if time.monotonic() - t0 >= self.controller.update_interval:
-                                t0 = time.monotonic()
-                                self.controller.request_update()
+                    try:
+                        self.handle_stop(driver)
+                        cmd = self.controller.next_command(timeout=self.controller.queue_timeout)
+                        match cmd:
+                            case DisconnectCommand():
+                                break
+                            case MoveRelativeCommand(x=x, y=y, z=z):
+                                self.move_relative(driver, x, y, z)
+                            case MoveAbsoluteCommand(x=x, y=y, z=z, z_limit=z_limit):
+                                self.move_absolute(driver, x, y, z, z_limit)
+                            case CalibrateCommand(x=x, y=y, z=z):
+                                self.calibrate(driver, x, y, z)
+                            case RangeMeasureCommand(x=x, y=y, z=z):
+                                self.range_measure(driver, x, y, z)
+                            case EnableJoystickCommand(enabled=enabled):
+                                self.enable_joystick(driver, enabled)
+                            case QueryPositionCommand():
+                                self.update_position(driver)
+                            case QueryCalibrationCommand():
+                                self.update_calibration(driver)
+                            case _:
+                                # Auto insert update request in regular intervals
+                                if time.monotonic() - t0 >= self.controller.update_interval:
+                                    t0 = time.monotonic()
+                                    self.controller.request_update()
+                                    self.controller.request_calibration_state()
+                    except AbortRequest:
+                        logger.info("Aborted!")
+                        # Clear the queue
+                        while True:
+                            try:
+                                self.controller._command_queue.get_nowait()
+                            except queue.Empty:
+                                break
+                        self.controller.clear_stop_request()
+                    except CalibrationError as exc:
+                        logger.info(str(exc))
         except Exception as exc:
             logger.exception(exc)
             self.controller.failed.emit(exc)
@@ -324,44 +341,60 @@ class CommandHandler:
         self.controller.update_calibration(cal)
 
     def move_relative(self, driver: Driver, x, y, z) -> None:
-        self.perform_motion(driver, lambda: driver.move_relative(Vector(x, y, z)))
-
-    def move_absolute(self, driver: Driver, x, y, z, z_limit) -> None:
-        if z_limit is not None:
-            pos = driver.position()
-            if pos.z > z_limit:
-                z_diff = abs(pos.z - z_limit)
-                self.perform_motion(driver, lambda: driver.move_relative(Vector(0, 0, -z_diff)))
-            pos = driver.position()
-            self.perform_motion(driver, lambda: driver.move_absolute(Vector(x, y, pos.z)))
-            self.perform_motion(driver, lambda: driver.move_absolute(Vector(x, y, z)))
-        else:
-            self.perform_motion(driver, lambda: driver.move_absolute(Vector(x, y, z)))
-
-    def calibrate(self, driver: Driver, x, y, z) -> None:
-        self.perform_motion(driver, lambda: driver.calibrate(Vector(x, y, z)))
-
-    def range_measure(self, driver: Driver, x, y, z) -> None:
-        self.perform_motion(driver, lambda: driver.range_measure(Vector(x, y, z)))
-
-    def perform_motion(self, driver: Driver, motion: Callable[[], None]) -> None:
-        motion_timeout: float = self.controller.motion_timeout
-        interval = poll_interval([0.010, 0.100, 0.500, 1.0])
         self.controller.update_moving(True)
         try:
-            motion()
-            t0 = time.monotonic()
-            while driver.is_moving():
-                self.handle_stop(driver)
-                pos = driver.position()
-                self.controller.update_position(pos)
-                if time.monotonic() - t0 > motion_timeout:
-                    raise TimeoutError(f"Motion timed out after {motion_timeout:.1f}s")
-                time.sleep(next(interval))
-            pos = driver.position()
-            self.controller.update_position(pos)
+            self.handle_calibration_error(driver)
+            self.perform_motion(driver, lambda: driver.move_relative(Vector(x, y, z)))
         finally:
             self.controller.update_moving(False)
+
+    def move_absolute(self, driver: Driver, x, y, z, z_limit) -> None:
+        self.controller.update_moving(True)
+        try:
+            self.handle_calibration_error(driver)
+            if z_limit is not None:
+                pos = driver.position()
+                if pos.z > z_limit:
+                    z_diff = abs(pos.z - z_limit)
+                    self.perform_motion(driver, lambda: driver.move_relative(Vector(0, 0, -z_diff)))
+                pos = driver.position()
+                self.perform_motion(driver, lambda: driver.move_absolute(Vector(x, y, pos.z)))
+                self.perform_motion(driver, lambda: driver.move_absolute(Vector(x, y, z)))
+            else:
+                self.perform_motion(driver, lambda: driver.move_absolute(Vector(x, y, z)))
+        finally:
+            self.controller.update_moving(False)
+
+    def calibrate(self, driver: Driver, x, y, z) -> None:
+        self.controller.update_moving(True)
+        try:
+            self.perform_motion(driver, lambda: driver.calibrate(Vector(x, y, z)))
+        finally:
+            self.controller.update_moving(False)
+
+    def range_measure(self, driver: Driver, x, y, z) -> None:
+        self.controller.update_moving(True)
+        try:
+            self.perform_motion(driver, lambda: driver.range_measure(Vector(x, y, z)))
+        finally:
+            self.controller.update_moving(False)
+
+    def perform_motion(self, driver: Driver, motion: Callable[[], None]) -> None:
+        self.handle_stop(driver)
+        motion_timeout: float = self.controller.motion_timeout
+        interval = poll_interval([0.100, 0.250, 0.500, 1.0])
+        motion()
+        t0 = time.monotonic()
+        while driver.is_moving():
+            self.handle_stop(driver)
+            pos = driver.position()
+            self.controller.update_position(pos)
+            if time.monotonic() - t0 > motion_timeout:
+                raise TimeoutError(f"Motion timed out after {motion_timeout:.1f}s")
+            time.sleep(next(interval))
+        self.handle_stop(driver)
+        pos = driver.position()
+        self.controller.update_position(pos)
 
     def enable_joystick(self, driver: Driver, enable) -> None:
         driver.enable_joystick(enable)
@@ -369,4 +402,11 @@ class CommandHandler:
     def handle_stop(self, driver: Driver) -> None:
         if self.controller.is_stop_requested():
             driver.abort()
-            self.controller.clear_stop_request()
+            raise AbortRequest()
+
+    def handle_calibration_error(self, driver: Driver) -> None:
+        for index, cal in enumerate(self.controller.calibration()):
+            if cal != 0x3:  # TODO
+                driver.abort()
+                axis = "XYZ"[index]
+                raise CalibrationError(f"Axis not calibrated: {axis}")

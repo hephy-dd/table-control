@@ -56,13 +56,13 @@ class Hydra2xDriver(Driver):
 
     def move_relative(self, delta: Vector) -> None:
         x, y, z = delta
-        self.resources[0].write(f"{x} {y} r")
-        self.resources[1].write(f"{z} 0 r")
+        self.resources[0].write(f"{x:.6f} {y:.6f} r")
+        self.resources[1].write(f"{z:.6f} 0 r")
 
     def move_absolute(self, position: Vector) -> None:
         x, y, z = position
-        self.resources[0].write(f"{x} {y} m")
-        self.resources[1].write(f"{z} 0 m")
+        self.resources[0].write(f"{x:.6f} {y:.6f} m")
+        self.resources[1].write(f"{z:.6f} 0 m")
 
     def calibrate(self, axes: Vector) -> None:
         x, y, z = axes

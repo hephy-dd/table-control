@@ -20,27 +20,27 @@ class Resource:
             self.resource = rm.open_resource(self.resource_name, **self.options)
         except Exception as exc:
             raise RuntimeError(f"Failed to open resource {self.resource_name!r}") from exc
-        logging.info("opened resource: %r", self.resource_name)
+        logging.debug("opened resource: %r", self.resource_name)
         return self
 
     def __exit__(self, *exc):
         self.resource.close()
         self.resource = None
-        logging.info("closed resource: %r", self.resource_name)
+        logging.debug("closed resource: %r", self.resource_name)
         return False
 
     def write(self, message: str) -> int:
-        logging.info("write: %r: %r", self.resource_name, message)
+        logging.debug("write: %r: %r", self.resource_name, message)
         try:
             return self.resource.write(message)
         except Exception as exc:
             raise RuntimeError(f"Failed to write to resource {self.resource_name!r}") from exc
 
     def query(self, message: str) -> str:
-        logging.info("write: %r: %r", self.resource_name, message)
+        logging.debug("write: %r: %r", self.resource_name, message)
         try:
             result = self.resource.query(message)
         except Exception as exc:
             raise RuntimeError(f"Failed to query from resource {self.resource_name!r}") from exc
-        logging.info("read: %r: %r", self.resource_name, result)
+        logging.debug("read: %r: %r", self.resource_name, result)
         return result
