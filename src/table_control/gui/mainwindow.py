@@ -12,7 +12,7 @@ from . import APP_TITLE, APP_VERSION, APP_CONTENTS_URL
 from .preferences import PreferencesDialog
 from .controller import TableController
 from .connection import ConnectionDialog
-from .dashboard import DashboardWidget
+from .dashboard import DashboardWidget, TablePosition
 from .utils import load_icon, load_text
 
 
@@ -52,7 +52,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stop_action = QtGui.QAction(self)
         self.stop_action.setText("&Stop")
         self.stop_action.setIcon(load_icon("stop.svg"))
-        self.stop_action.triggered.connect(self.request_stop)
+        self.stop_action.setShortcut("Ctrl+P")
+        self.stop_action.triggered.connect(self.abort)
 
         self.joystick_action = QtGui.QAction(self)
         self.joystick_action.setCheckable(True)
@@ -111,7 +112,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dashboard.absolute_move_requested.connect(self.table_controller.move_absolute)
         self.dashboard.calibrate_requested.connect(self.table_controller.calibrate)
         self.dashboard.range_measure_requested.connect(self.table_controller.range_measure)
-        self.dashboard.stop_requested.connect(self.table_controller.request_stop)
+        self.dashboard.stop_requested.connect(self.stop_action.trigger)
         self.dashboard.update_interval_changed.connect(self.table_controller.set_update_interval)
         self.dashboard.z_limit_enabled_changed.connect(self.table_controller.set_z_limit_enabled)
         self.dashboard.z_limit_changed.connect(self.table_controller.set_z_limit)
@@ -139,7 +140,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.connected_state.addTransition(self.table_controller.disconnected, self.disconnected_state)
         self.disconnected_state.addTransition(self.table_controller.connected, self.connected_state)
         self.disconnected_state.addTransition(self.table_controller.disconnected, self.disconnected_state)
-        self.connected_state.addTransition(self.table_controller.movement_started, self.moving_state)
         self.connected_state.addTransition(self.dashboard.move_requested, self.moving_state)
         self.moving_state.addTransition(self.table_controller.movement_finished, self.connected_state)
         self.moving_state.addTransition(self.table_controller.disconnected, self.disconnected_state)
@@ -169,35 +169,64 @@ class MainWindow(QtWidgets.QMainWindow):
         settings = self.settings
         self.plugin_manager.dispatch("before_read_settings", (settings,))
         settings.beginGroup("mainwindow")
+
         geometry: QtCore.QByteArray = settings.value("geometry", QtCore.QByteArray(), QtCore.QByteArray)  # type: ignore
         state: QtCore.QByteArray = settings.value("state", QtCore.QByteArray(), QtCore.QByteArray)  # type: ignore
         updateInterval: float = settings.value("update_interval", 1.0, float)  # type: ignore
         z_limit_enabled: bool = settings.value("z_limit_enabled", False, bool)  # type: ignore
         z_limit: float = settings.value("z_limit", 0.0, float)  # type: ignore
-        settings.endGroup()
         self.restoreGeometry(geometry)
         self.restoreState(state)
         self.dashboard.set_update_interval(updateInterval)
         self.dashboard.set_z_limit_enabled(z_limit_enabled)
         self.dashboard.set_z_limit(z_limit)
+
+        # Positions
+        self.dashboard.clear_positions()
+        size = settings.beginReadArray("positions")
+        for i in range(size):
+            settings.setArrayIndex(i)
+            name = settings.value("name", "", type=str)
+            x = settings.value("x", 0.0, type=float)
+            y = settings.value("y", 0.0, type=float)
+            z = settings.value("z", 0.0, type=float)
+            comment = settings.value("comment", "", type=str)
+            self.dashboard.add_position(TablePosition(name, x, y, z, comment))  # type: ignore
+        settings.endArray()
+
+        settings.endGroup()
         self.plugin_manager.dispatch("after_read_settings", (settings,))
 
     def write_settings(self) -> None:
         settings = self.settings
         self.plugin_manager.dispatch("before_write_settings", (settings,))
         settings.beginGroup("mainwindow")
+
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("state", self.saveState())
         settings.setValue("update_interval", self.dashboard.update_interval())
         settings.setValue("z_limit_enabled", self.dashboard.z_limit_enabled())
         settings.setValue("z_limit", self.dashboard.z_limit())
+
+        # Positions
+        positions = self.dashboard.positions()
+        settings.beginWriteArray("positions", len(positions))
+        for i, p in enumerate(positions):
+            settings.setArrayIndex(i)
+            settings.setValue("name", p.name)
+            settings.setValue("x", p.x)
+            settings.setValue("y", p.y)
+            settings.setValue("z", p.z)
+            settings.setValue("comment", p.comment)
+        settings.endArray()
+
         settings.endGroup()
         self.plugin_manager.dispatch("after_write_settings", (settings,))
 
     def sync_controller(self) -> None:
         self.table_controller.update_interval = self.dashboard.update_interval()
-        self.table_controller.z_limit_enabled = self.dashboard.z_limit_enabled()
-        self.table_controller.z_limit = self.dashboard.z_limit()
+        self.table_controller.set_z_limit_enabled(self.dashboard.z_limit_enabled())
+        self.table_controller.set_z_limit(self.dashboard.z_limit())
 
     @QtCore.Slot()
     def show_preferences(self) -> None:
@@ -263,8 +292,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.table_controller.disconnect_table()
 
     @QtCore.Slot()
-    def request_stop(self) -> None:
-        self.table_controller.request_stop()
+    def abort(self) -> None:
+        self.table_controller.abort()
 
     @QtCore.Slot(bool)
     def request_enable_joystick(self, checked: bool) -> None:

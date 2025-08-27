@@ -51,11 +51,11 @@ class CorvusDriver(Driver):
 
     def move_relative(self, delta: Vector) -> None:
         x, y, z = delta
-        self.resources[0].write(f"{x} {y} {z} rmove")
+        self.resources[0].write(f"{x:.6f} {y:.6f} {z:.6f} rmove")
 
     def move_absolute(self, position: Vector) -> None:
         x, y, z = position
-        self.resources[0].write(f"{x} {y} {z} move")
+        self.resources[0].write(f"{x:.6f} {y:.6f} {z:.6f} move")
 
     def calibrate(self, axes: Vector) -> None:
         x, y, z = axes

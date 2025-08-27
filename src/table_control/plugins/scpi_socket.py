@@ -244,7 +244,7 @@ class SocketServer:
 
         # [:]MOVE:ABORT
         if re.match(r"^\:?move\:abort$", command):
-            self.table.request_stop()
+            self.table.abort()
             return None
 
         # [:]SYStem:ERRor:COUNt?

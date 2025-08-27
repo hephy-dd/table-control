@@ -1,6 +1,7 @@
 from PySide6 import QtCore, QtGui, QtWidgets
 
-from .utils import load_icon
+from .positions import TablePositionsWidget, TablePosition
+from .utils import load_icon, FlashLabel
 
 
 def decode_calibration(value: int) -> str:
@@ -42,6 +43,8 @@ class DashboardWidget(QtWidgets.QWidget):
         self.z_pos_spin_box.setDecimals(3)
         self.z_pos_spin_box.setRange(-10000, 10000)
         self.z_pos_spin_box.setSuffix(" mm")
+
+        self.pos_flash_label = FlashLabel(flash_duration_ms=250)
 
         self.x_calibration_line_edit = QtWidgets.QLineEdit(self)
         self.x_calibration_line_edit.setReadOnly(True)
@@ -146,12 +149,14 @@ class DashboardWidget(QtWidgets.QWidget):
         self.x_rm_button = QtWidgets.QPushButton("Rm")
         self.x_rm_button.setMaximumWidth(54)
         self.x_rm_button.clicked.connect(lambda: self.range_measure(True, False, False))
+
         self.y_cal_button = QtWidgets.QPushButton("Cal")
         self.y_cal_button.setMaximumWidth(54)
         self.y_cal_button.clicked.connect(lambda: self.calibrate(False, True, False))
         self.y_rm_button = QtWidgets.QPushButton("Rm")
         self.y_rm_button.setMaximumWidth(54)
         self.y_rm_button.clicked.connect(lambda: self.range_measure(False, True, False))
+
         self.z_cal_button = QtWidgets.QPushButton("Cal")
         self.z_cal_button.setMaximumWidth(54)
         self.z_cal_button.clicked.connect(lambda: self.calibrate(False, False, True))
@@ -177,6 +182,19 @@ class DashboardWidget(QtWidgets.QWidget):
         self.z_limit_spin_box.setSuffix(" mm")
         self.z_limit_spin_box.valueChanged.connect(self.z_limit_changed)
 
+        self.control_widget = QtWidgets.QWidget(self)
+
+        self.positions_widget = TablePositionsWidget(self)
+        self.positions_widget.move_requested.connect(self.absolute_move)
+        self.positions_widget.stop_requested.connect(self.stop_requested)
+
+        self.calibration_widget = QtWidgets.QWidget(self)
+
+        self.tab_widget = QtWidgets.QTabWidget(self)
+        self.tab_widget.addTab(self.control_widget, "&Control")
+        self.tab_widget.addTab(self.positions_widget, "&Positions")
+        self.tab_widget.addTab(self.calibration_widget, "&Calibration")
+
         position_layout = QtWidgets.QGridLayout()
         position_layout.addWidget(QtWidgets.QLabel("X"), 0, 0)
         position_layout.addWidget(QtWidgets.QLabel("Y"), 0, 1)
@@ -184,6 +202,7 @@ class DashboardWidget(QtWidgets.QWidget):
         position_layout.addWidget(self.x_pos_spin_box, 1, 0)
         position_layout.addWidget(self.y_pos_spin_box, 1, 1)
         position_layout.addWidget(self.z_pos_spin_box, 1, 2)
+        position_layout.addWidget(self.pos_flash_label, 1, 3)
         position_layout.setColumnStretch(0, 1)
         position_layout.setColumnStretch(1, 1)
         position_layout.setColumnStretch(2, 1)
@@ -209,16 +228,13 @@ class DashboardWidget(QtWidgets.QWidget):
         calibration_layout.addWidget(self.x_calibration_line_edit, 1, 0)
         calibration_layout.addWidget(self.y_calibration_line_edit, 1, 1)
         calibration_layout.addWidget(self.z_calibration_line_edit, 1, 2)
-        calibration_layout.addLayout(x_calibration_layout, 2, 0)
-        calibration_layout.addLayout(y_calibration_layout, 2, 1)
-        calibration_layout.addLayout(z_calibration_layout, 2, 2)
         calibration_layout.setColumnStretch(0, 1)
         calibration_layout.setColumnStretch(1, 1)
         calibration_layout.setColumnStretch(2, 1)
         calibration_layout.setColumnStretch(3, 1)
         calibration_layout.setColumnStretch(4, 1)
 
-        button_layout = QtWidgets.QGridLayout()
+        button_layout = QtWidgets.QGridLayout(self.control_widget)
         button_layout.addWidget(self.xy_step_spin_box, 1, 1)
         button_layout.addWidget(self.left_button, 1, 0)
         button_layout.addWidget(self.right_button, 1, 2)
@@ -248,6 +264,16 @@ class DashboardWidget(QtWidgets.QWidget):
 
         button_layout.addWidget(self.stop_button, 7, 3)
 
+        calibration_widget_layout = QtWidgets.QGridLayout(self.calibration_widget)
+        calibration_widget_layout.addWidget(QtWidgets.QLabel("X"), 0, 0)
+        calibration_widget_layout.addWidget(QtWidgets.QLabel("Y"), 0, 1)
+        calibration_widget_layout.addWidget(QtWidgets.QLabel("Z"), 0, 2)
+        calibration_widget_layout.addLayout(x_calibration_layout, 1, 0)
+        calibration_widget_layout.addLayout(y_calibration_layout, 1, 1)
+        calibration_widget_layout.addLayout(z_calibration_layout, 1, 2)
+        calibration_widget_layout.setColumnStretch(3, 1)
+        calibration_widget_layout.setRowStretch(2, 1)
+
         buttom_layout = QtWidgets.QGridLayout()
         buttom_layout.addWidget(QtWidgets.QLabel("Update Interval"), 0, 0, 1, 1)
         buttom_layout.addWidget(self.update_interval_spin_box, 1, 0)
@@ -263,8 +289,8 @@ class DashboardWidget(QtWidgets.QWidget):
         left_layout.addLayout(position_layout)
         left_layout.addWidget(QtWidgets.QLabel("Calibration"))
         left_layout.addLayout(calibration_layout)
-        left_layout.addWidget(QtWidgets.QLabel("Movement"))
-        left_layout.addLayout(button_layout)
+        left_layout.addWidget(QtWidgets.QLabel("Commands"))
+        left_layout.addWidget(self.tab_widget)
         left_layout.addLayout(buttom_layout)
         left_layout.addStretch(1)
 
@@ -297,7 +323,7 @@ class DashboardWidget(QtWidgets.QWidget):
     def set_update_interval(self, interval: float) -> None:
         return self.update_interval_spin_box.setValue(interval)
 
-    def z_limit_enabled(self) -> float:
+    def z_limit_enabled(self) -> bool:
         return self.z_limit_enabled_check_box.isChecked()
 
     def set_z_limit_enabled(self, enabled: bool) -> None:
@@ -331,6 +357,7 @@ class DashboardWidget(QtWidgets.QWidget):
         self.x_pos_spin_box.setValue(x)
         self.y_pos_spin_box.setValue(y)
         self.z_pos_spin_box.setValue(z)
+        self.pos_flash_label.flash()
 
     def set_table_calibration(self, x, y, z) -> None:
         x, y, z = map(decode_calibration, [x, y, z])
@@ -338,16 +365,28 @@ class DashboardWidget(QtWidgets.QWidget):
         self.y_calibration_line_edit.setText(format(y))
         self.z_calibration_line_edit.setText(format(z))
 
+    def clear_positions(self) -> None:
+        self.positions_widget.clear_positions()
+
+    def add_position(self, position: TablePosition) -> None:
+        self.positions_widget.add_position(position)
+
+    def positions(self) -> list[TablePosition]:
+        return self.positions_widget.positions()
+
     def enter_disconnected(self) -> None:
+        self.positions_widget.enter_disconnected()
         self.setEnabled(False)
         self.clear_state()
 
     def enter_connected(self) -> None:
+        self.positions_widget.enter_connected()
         self.setEnabled(True)
         for widget in self.control_widgets:
             widget.setEnabled(True)
 
     def enter_moving(self) -> None:
+        self.positions_widget.enter_moving()
         for widget in self.control_widgets:
             widget.setEnabled(False)
 
