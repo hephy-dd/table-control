@@ -53,7 +53,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stop_action.setText("&Stop")
         self.stop_action.setIcon(load_icon("stop.svg"))
         self.stop_action.setShortcut("Ctrl+P")
-        self.stop_action.triggered.connect(self.request_stop)
+        self.stop_action.triggered.connect(self.abort)
 
         self.joystick_action = QtGui.QAction(self)
         self.joystick_action.setCheckable(True)
@@ -112,7 +112,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dashboard.absolute_move_requested.connect(self.table_controller.move_absolute)
         self.dashboard.calibrate_requested.connect(self.table_controller.calibrate)
         self.dashboard.range_measure_requested.connect(self.table_controller.range_measure)
-        self.dashboard.stop_requested.connect(self.table_controller.request_stop)
+        self.dashboard.stop_requested.connect(self.stop_action.trigger)
         self.dashboard.update_interval_changed.connect(self.table_controller.set_update_interval)
         self.dashboard.z_limit_enabled_changed.connect(self.table_controller.set_z_limit_enabled)
         self.dashboard.z_limit_changed.connect(self.table_controller.set_z_limit)
@@ -140,7 +140,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.connected_state.addTransition(self.table_controller.disconnected, self.disconnected_state)
         self.disconnected_state.addTransition(self.table_controller.connected, self.connected_state)
         self.disconnected_state.addTransition(self.table_controller.disconnected, self.disconnected_state)
-        self.connected_state.addTransition(self.table_controller.movement_started, self.moving_state)
         self.connected_state.addTransition(self.dashboard.move_requested, self.moving_state)
         self.moving_state.addTransition(self.table_controller.movement_finished, self.connected_state)
         self.moving_state.addTransition(self.table_controller.disconnected, self.disconnected_state)
@@ -226,8 +225,8 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def sync_controller(self) -> None:
         self.table_controller.update_interval = self.dashboard.update_interval()
-        self.table_controller.z_limit_enabled = self.dashboard.z_limit_enabled()
-        self.table_controller.z_limit = self.dashboard.z_limit()
+        self.table_controller.set_z_limit_enabled(self.dashboard.z_limit_enabled())
+        self.table_controller.set_z_limit(self.dashboard.z_limit())
 
     @QtCore.Slot()
     def show_preferences(self) -> None:
@@ -293,8 +292,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.table_controller.disconnect_table()
 
     @QtCore.Slot()
-    def request_stop(self) -> None:
-        self.table_controller.request_stop()
+    def abort(self) -> None:
+        self.table_controller.abort()
 
     @QtCore.Slot(bool)
     def request_enable_joystick(self, checked: bool) -> None:

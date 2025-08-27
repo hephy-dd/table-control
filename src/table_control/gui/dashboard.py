@@ -1,7 +1,7 @@
 from PySide6 import QtCore, QtGui, QtWidgets
 
 from .positions import TablePositionsWidget, TablePosition
-from .utils import load_icon
+from .utils import load_icon, FlashLabel
 
 
 def decode_calibration(value: int) -> str:
@@ -43,6 +43,8 @@ class DashboardWidget(QtWidgets.QWidget):
         self.z_pos_spin_box.setDecimals(3)
         self.z_pos_spin_box.setRange(-10000, 10000)
         self.z_pos_spin_box.setSuffix(" mm")
+
+        self.pos_flash_label = FlashLabel(flash_duration_ms=250)
 
         self.x_calibration_line_edit = QtWidgets.QLineEdit(self)
         self.x_calibration_line_edit.setReadOnly(True)
@@ -200,6 +202,7 @@ class DashboardWidget(QtWidgets.QWidget):
         position_layout.addWidget(self.x_pos_spin_box, 1, 0)
         position_layout.addWidget(self.y_pos_spin_box, 1, 1)
         position_layout.addWidget(self.z_pos_spin_box, 1, 2)
+        position_layout.addWidget(self.pos_flash_label, 1, 3)
         position_layout.setColumnStretch(0, 1)
         position_layout.setColumnStretch(1, 1)
         position_layout.setColumnStretch(2, 1)
@@ -354,6 +357,7 @@ class DashboardWidget(QtWidgets.QWidget):
         self.x_pos_spin_box.setValue(x)
         self.y_pos_spin_box.setValue(y)
         self.z_pos_spin_box.setValue(z)
+        self.pos_flash_label.flash()
 
     def set_table_calibration(self, x, y, z) -> None:
         x, y, z = map(decode_calibration, [x, y, z])

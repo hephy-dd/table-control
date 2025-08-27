@@ -44,3 +44,10 @@ class Resource:
             raise RuntimeError(f"Failed to query from resource {self.resource_name!r}") from exc
         logging.debug("read: %r: %r", self.resource_name, result)
         return result
+
+
+def create_resource(resource: dict[str, Any]) -> Resource:
+    resource_name: str = resource.get("resource_name", "")
+    visa_library: str = resource.get("visa_library", "@py")
+    options: dict = resource.get("options", {})
+    return Resource(resource_name, visa_library, **options)
