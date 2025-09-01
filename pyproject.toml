@@ -19,7 +19,7 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://www.oeaw.ac.at/en/hephy/research/detector-development"
+Homepage = "https://www.oeaw.ac.at/en/mbi/research/detector-development"
 Repository = "https://github.com/hephy-dd/table-control"
 Documentation = "https://github.com/hephy-dd/table-control"
 

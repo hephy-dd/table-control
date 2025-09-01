@@ -1,4 +1,4 @@
-"""Legacy TCP socket emulating HEPHY LabView XYZ table controller.
+"""Legacy TCP socket emulating MBI LabView XYZ table controller.
 
 Supported TCP commands:
 
