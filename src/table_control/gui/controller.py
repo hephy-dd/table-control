@@ -1,3 +1,4 @@
+import itertools
 import threading
 import time
 import queue
@@ -22,12 +23,11 @@ class Command:
     def __call__(self, context: Context) -> None: ...
 
 
-@dataclass(slots=True, frozen=True)
-class ConnectCommand(Command): ...
-
-
-@dataclass(slots=True, frozen=True)
-class DisconnectCommand(Command): ...
+@dataclass(slots=True, order=True, frozen=True)
+class CommandEnvelope:
+    priority: int
+    counter: int
+    command: Command
 
 
 class AbstractController(QtCore.QObject):
@@ -39,28 +39,39 @@ class AbstractController(QtCore.QObject):
     def __init__(self, parent: QtCore.QObject | None = None) -> None:
         super().__init__(parent)
         self.queue_timeout: float = 0.01
-        self._ctrl_q: queue.Queue[Command] = queue.Queue()
-        self._q: queue.Queue[Command] = queue.Queue()
+        self._q: queue.PriorityQueue[CommandEnvelope] = queue.PriorityQueue()
+        self._q_counter = itertools.count()
         self._shutdown_request: threading.Event = threading.Event()
         self._lock: threading.RLock = threading.RLock()
-        self._thread: threading.Thread = threading.Thread(target=self._event_loop, name=type(self).__name__)
+        self._thread: threading.Thread = threading.Thread(target=self.event_loop, name=type(self).__name__)
         self._thread.start()
 
     @contextmanager
     def context_factory(self) -> Iterator[Context]:
         yield Context()
 
-    def put_command(self, command: Command) -> None:
+    def put_command(self, command: Command, priority: int = 0) -> None:
         with self._lock:
             if not isinstance(command, Command):
                 raise TypeError(f"command not of type: {Command}")
-            self._q.put(command)
+            self._q.put(CommandEnvelope(priority, next(self._q_counter), command))
 
-    def connect_table(self) -> None:
-        self._ctrl_q.put(ConnectCommand())
+    def get_command(self, *, timeout=None) -> Command | None:
+        try:
+            task = self._q.get(timeout=timeout)
+            if isinstance(task, CommandEnvelope):
+                return task.command
+        except queue.Empty:
+            ...
+        return None
 
-    def disconnect_table(self) -> None:
-        self._ctrl_q.put(DisconnectCommand())
+    def drain_queue(self) -> None:
+        with self._lock:
+            while True:
+                try:
+                    self._q.get_nowait()
+                except queue.Empty:
+                    break
 
     def is_running(self) -> bool:
         return not self._shutdown_request.is_set()
@@ -70,71 +81,22 @@ class AbstractController(QtCore.QObject):
         self._shutdown_request.set()
         self._thread.join()
 
-    def on_connected(self, context) -> None:
-        ...
-
-    def on_tick(self, context) -> None:
-        ...
-
-    def on_exception(self, context, exc) -> bool:
-        return False
-
-    def on_idle(self, context) -> None:
-        ...
-
-    def on_disconnected(self, context) -> None:
-        ...
-
-    def _drain_queue(self) -> None:
-        with self._lock:
-            while True:
-                try:
-                    self._q.get_nowait()
-                    self._q.task_done()
-                except queue.Empty:
-                    break
-
-    def _event_loop(self) -> None:
+    def event_loop(self) -> None:
         while self.is_running():
             try:
-                command = self._ctrl_q.get(timeout=0.1)
-                if isinstance(command, ConnectCommand):
-                    with self.context_factory() as context:
-                        self._handle_connection(context)
-            except queue.Empty:
-                continue
+                command = self.get_command(timeout=self.queue_timeout)
+                if isinstance(command, Command):
+                    self.event_pump(command)
             except Exception as exc:
                 logger.exception(exc)
 
-    def _handle_connection(self, context) -> None:
-        try:
-            self.connected.emit()
-            self.on_connected(context)
-            while self.is_running():
-                try:
-                    command = self._ctrl_q.get_nowait()
-                    if isinstance(command, DisconnectCommand):
-                        break
-                except queue.Empty:
-                    ...
-                try:
-                    self.on_tick(context)
-                    try:
-                        command = self._q.get(timeout=self.queue_timeout)
-                        self._q.task_done()
-                        if isinstance(command, Command):
-                            command(context)
-                    except queue.Empty:
-                        self.on_idle(context)
-                except Exception as exc:
-                    if not self.on_exception(context, exc):
-                        raise
-        finally:
-            self.disconnected.emit()
-            self.on_disconnected(context)
+    def event_pump(self, command: Command) -> None:
+        time.sleep(0.01)
 
 
 # Table controller
+
+class DisconnectRequest(Exception): ...
 
 
 class AbortRequest(Exception): ...
@@ -158,17 +120,26 @@ class Appliance:
 
 
 @dataclass(slots=True, frozen=True)
+class ConnectCommand(Command): ...
+
+
+@dataclass(slots=True, frozen=True)
+class DisconnectCommand(Command): ...
+
+
+@dataclass(slots=True, frozen=True)
 class MoveRelativeCommand(Command):
     x: float
     y: float
     z: float
 
     def __call__(self, context) -> None:
-        context.controller.update_moving(True)
+        logger.info("move relative: %.3f %.3f %.3f", self.x, self.y, self.z)
+        context.set_moving(True)
         try:
-            perform_motion(context, lambda context: context.driver.move_relative(Vector(self.x, self.y, self.z)))
+            context.perform_motion(lambda driver: driver.move_relative(Vector(self.x, self.y, self.z)))
         finally:
-            context.controller.update_moving(False)
+            context.set_moving(False)
 
 
 @dataclass(slots=True, frozen=True)
@@ -179,13 +150,14 @@ class MoveAbsoluteCommand(Command):
     z_limit: float | None
 
     def __call__(self, context) -> None:
-        context.controller.update_moving(True)
+        context.set_moving(True)
         try:
-            raise_on_calibration_error(context)
+            context.raise_on_calibration_error()
 
             # No safety constraint: go straight to the target.
             if self.z_limit is None:
-                perform_motion(context, lambda ctx: ctx.driver.move_absolute(Vector(self.x, self.y, self.z)))
+                logger.info("move absolute: %.3f %.3f %.3f", self.x, self.y, self.z)
+                context.perform_motion(lambda driver: driver.move_absolute(Vector(self.x, self.y, self.z)))
                 return
 
             # Current position
@@ -195,47 +167,52 @@ class MoveAbsoluteCommand(Command):
             # 1) If we start ABOVE the safe travel Z, drop vertically to z_limit first.
             if current_z > self.z_limit:
                 dz = current_z - self.z_limit
-                perform_motion(context, lambda ctx: ctx.driver.move_relative(Vector(0, 0, -dz)))
+                logger.info("move relative: %.3f %.3f %.3f", 0, 0, -dz)
+                context.perform_motion(lambda driver: driver.move_relative(Vector(0, 0, -dz)))
                 current_z = self.z_limit  # we are now exactly at the safe Z
 
             # 2) Move in X/Y at the current safe Z (do not change Z during XY travel).
             if pos.x != self.x or pos.y != self.y:
-                perform_motion(context, lambda ctx: ctx.driver.move_absolute(Vector(self.x, self.y, current_z)))
+                logger.info("move absolute: %.3f %.3f %.3f", self.x, self.y, current_z)
+                context.perform_motion(lambda driver: driver.move_absolute(Vector(self.x, self.y, current_z)))
 
             # 3) Finally, adjust Z to the exact target.
             if self.z != current_z:
-                perform_motion(context, lambda ctx: ctx.driver.move_absolute(Vector(self.x, self.y, self.z)))
+                logger.info("move absolute: %.3f %.3f %.3f", self.x, self.y, self.z)
+                context.perform_motion(lambda driver: driver.move_absolute(Vector(self.x, self.y, self.z)))
 
         finally:
-            context.controller.update_moving(False)
+            context.set_moving(False)
 
 
 @dataclass(slots=True, frozen=True)
 class CalibrateCommand(Command):
-    x: float
-    y: float
-    z: float
+    x: int
+    y: int
+    z: int
 
     def __call__(self, context) -> None:
-        context.controller.update_moving(True)
+        context.set_moving(True)
         try:
-            perform_motion(context, lambda context: context.driver.calibrate(Vector(self.x, self.y, self.z)))
+            logger.info("calibrate: x=%d y=%d z=%d", self.x, self.y, self.z)
+            context.perform_motion(lambda driver: driver.calibrate(Vector(self.x, self.y, self.z)))
         finally:
-            context.controller.update_moving(False)
+            context.set_moving(False)
 
 
 @dataclass(slots=True, frozen=True)
 class RangeMeasureCommand(Command):
-    x: float
-    y: float
-    z: float
+    x: int
+    y: int
+    z: int
 
     def __call__(self, context) -> None:
-        context.controller.update_moving(True)
+        context.set_moving(True)
         try:
-            perform_motion(context, lambda context: context.driver.range_measure(Vector(self.x, self.y, self.z)))
+            logger.info("range measure: x=%d y=%d z=%d", self.x, self.y, self.z)
+            context.perform_motion(lambda driver: driver.range_measure(Vector(self.x, self.y, self.z)))
         finally:
-            context.controller.update_moving(False)
+            context.set_moving(False)
 
 
 @dataclass(slots=True, frozen=True)
@@ -243,21 +220,22 @@ class EnableJoystickCommand(Command):
     enabled: bool
 
     def __call__(self, context) -> None:
+        logger.info("set joystick: %s", "on" if self.enabled else "off")
         context.driver.enable_joystick(self.enabled)
 
 
 @dataclass(slots=True, frozen=True)
 class QueryPositionCommand(Command):
     def __call__(self, context) -> None:
-        pos = context.driver.position()
-        context.controller.update_position(pos)
+        x, y, z = context.driver.position()
+        context.set_position(x, y, z)
 
 
 @dataclass(slots=True, frozen=True)
 class QueryCalibrationCommand(Command):
     def __call__(self, context) -> None:
-        cal = context.driver.calibration_state()
-        context.controller.update_calibration(cal)
+        x, y, z = context.driver.calibration_state()
+        context.set_calibration(x, y, z)
 
 
 @dataclass(slots=True)
@@ -269,12 +247,65 @@ class TableState:
     z_limit: float
 
 
+class TableContext(Context):
+    def __init__(self, controller: "TableController", driver: Driver) -> None:
+        self._controller = controller
+        self.driver = driver
+
+    def set_moving(self, enabled: bool) -> None:
+        self._controller.set_moving(enabled)
+
+    def set_position(self, x: float, y: float, z: float) -> None:
+        self._controller.set_position(x, y, z)
+
+    def set_calibration(self, x: int, y: int, z: int) -> None:
+        self._controller.set_calibration(x, y, z)
+
+    def raise_on_abort(self) -> None:
+        timeout = 60.0
+        if self._controller.is_abort_requested():
+            self.driver.abort()
+            t0 = time.monotonic()
+            while self.driver.is_moving():
+                if time.monotonic() - t0 > timeout:
+                    logger.error("Abort failed to stop movement!")
+                    break
+                time.sleep(0.01)  # avoid spin
+            raise AbortRequest()
+
+
+    def raise_on_calibration_error(self) -> None:
+        for index, cal in enumerate(self._controller.calibration()):
+            if cal != 0x3:  # TODO
+                self.driver.abort()
+                axis = "XYZ"[index]
+                raise CalibrationError(f"Axis not calibrated: {axis}")
+
+
+    def perform_motion(self, motion: Callable[[Driver], None]) -> None:
+        self.raise_on_abort()
+        motion_timeout: float = self._controller.motion_timeout
+        interval = poll_interval([0.010, 0.100, 0.250, 0.500, 1.0])
+        motion(self.driver)  # start async motion
+        t0 = time.monotonic()
+        while self.driver.is_moving():
+            self.raise_on_abort()
+            x, y, z = self.driver.position()
+            self.set_position(x, y, z)
+            if time.monotonic() - t0 > motion_timeout:
+                raise TimeoutError(f"Motion timed out after {motion_timeout:.1f}s")
+            time.sleep(next(interval))
+        self.raise_on_abort()
+        x, y, z = self.driver.position()
+        self.set_position(x, y, z)
+
+
 class TableController(AbstractController):
 
     info_changed = QtCore.Signal(str)
-    position_changed = QtCore.Signal(float, float, float)
     movement_started = QtCore.Signal()
     movement_finished = QtCore.Signal()
+    position_changed = QtCore.Signal(float, float, float)
     calibration_changed = QtCore.Signal(int, int, int)
 
     def __init__(self, parent: QtCore.QObject | None = None) -> None:
@@ -293,7 +324,7 @@ class TableController(AbstractController):
         self._abort_request: threading.Event = threading.Event()
 
     @contextmanager
-    def context_factory(self) -> Iterator[Context]:
+    def context_factory(self) -> Iterator[TableContext]:
         """Open all resources described by `appliance`, construct its driver,
         and yield (driver, resources). All are closed on exit.
         """
@@ -318,6 +349,12 @@ class TableController(AbstractController):
 
     def abort(self) -> None:
         self._abort_request.set()
+
+    def connect_table(self) -> None:
+        self.put_command(ConnectCommand(), priority=-1)
+
+    def disconnect_table(self) -> None:
+        self.put_command(DisconnectCommand(), priority=-1)
 
     def request_enable_joystick(self, enabled: bool) -> None:
         self.put_command(EnableJoystickCommand(enabled))
@@ -368,7 +405,7 @@ class TableController(AbstractController):
         with self._lock:
             return self._state.calibration
 
-    def update_moving(self, state: bool) -> None:
+    def set_moving(self, state: bool) -> None:
         with self._lock:
             if state != self._state.is_moving:
                 self._state.is_moving = state
@@ -377,37 +414,37 @@ class TableController(AbstractController):
         else:
             self.movement_finished.emit()
 
-    def update_position(self, position: Vector) -> None:
-        x, y, z = position
+    def set_position(self, x: float, y: float, z: float) -> None:
         with self._lock:
             self._state.position = (x, y, z)
         self.position_changed.emit(x, y, z)
 
-    def update_calibration(self, calibration: Vector) -> None:
-        x, y, z = calibration
+    def set_calibration(self, x: int, y: int, z: int) -> None:
         with self._lock:
-            self._state.calibration = (int(x), int(y), int(z))
-        self.calibration_changed.emit(int(x), int(y), int(z))
+            self._state.calibration = (x, y, z)
+        self.calibration_changed.emit(x, y, z)
 
     def clear_state(self) -> None:
+        x = y = z = float("nan")
         with self._lock:
             self._state.is_moving = False
-            self._state.position = (float('nan'), float('nan'), float('nan'))
+            self._state.position = (x, y, z)
             self._state.calibration = (0, 0, 0)
-        self.position_changed.emit(float('nan'), float('nan'), float('nan'))
+        self.position_changed.emit(x, y, z)
 
     def on_connected(self, context) -> None:
-        context.driver.configure()
+        context.driver.configure()  # TODO tricky: Corvus requires to set mode before identify
         info = context.driver.identify()
+        logger.info("Connected to: %s", "; ".join([str(idn) for idn in info]))
         self.info_changed.emit(format(info))
 
-    def on_tick(self, context) -> None:
-        raise_on_abort(context)
+    def on_disconnected(self, context) -> None:
+        logger.info("Disonnected")
 
     def on_exception(self, context, exc) -> bool:
         if isinstance(exc, AbortRequest):
             logger.info("Aborted")
-            self._drain_queue()
+            self.drain_queue()
             self.clear_abort_request()
             self.movement_finished.emit()
             return True
@@ -417,53 +454,34 @@ class TableController(AbstractController):
         return False
 
     def on_idle(self, context) -> None:
+        context.raise_on_abort()
         # Auto insert update request in regular intervals
         if time.monotonic() - self._t0 >= self.update_interval:
             self._t0 = time.monotonic()
             self.request_update()
             self.request_calibration_state()
 
+    def event_pump(self, command: Command) -> None:
+        if isinstance(command, ConnectCommand):
+            with self.context_factory() as context:
+                self.handle_context(context)
 
-class TableContext(Context):
-    def __init__(self, controller: TableController, driver: Driver) -> None:
-        self.controller = controller
-        self.driver = driver
-
-
-def raise_on_abort(context: TableContext) -> None:
-    timeout = 60.0
-    if context.controller.is_abort_requested():
-        context.driver.abort()
-        t0 = time.monotonic()
-        while context.driver.is_moving():
-            if time.monotonic() - t0 > timeout:
-                logger.error("Abort failed to stop movement!")
-                break
-            time.sleep(0.01)  # avoid spin
-        raise AbortRequest()
-
-
-def raise_on_calibration_error(context: TableContext) -> None:
-    for index, cal in enumerate(context.controller.calibration()):
-        if cal != 0x3:  # TODO
-            context.driver.abort()
-            axis = "XYZ"[index]
-            raise CalibrationError(f"Axis not calibrated: {axis}")
-
-
-def perform_motion(context: TableContext, motion: Callable[[TableContext], None]) -> None:
-    raise_on_abort(context)
-    motion_timeout: float = context.controller.motion_timeout
-    interval = poll_interval([0.010, 0.100, 0.250, 0.500, 1.0])
-    motion(context)
-    t0 = time.monotonic()
-    while context.driver.is_moving():
-        raise_on_abort(context)
-        pos = context.driver.position()
-        context.controller.update_position(pos)
-        if time.monotonic() - t0 > motion_timeout:
-            raise TimeoutError(f"Motion timed out after {motion_timeout:.1f}s")
-        time.sleep(next(interval))
-    raise_on_abort(context)
-    pos = context.driver.position()
-    context.controller.update_position(pos)
+    def handle_context(self, context: TableContext) -> None:
+        try:
+            self.connected.emit()
+            self.on_connected(context)
+            while self.is_running():
+                try:
+                    command = self.get_command(timeout=self.queue_timeout)
+                    if isinstance(command, DisconnectCommand):
+                        break
+                    elif isinstance(command, Command):
+                        command(context)
+                    elif command is None:
+                        self.on_idle(context)
+                except Exception as exc:
+                    if not self.on_exception(context, exc):
+                        raise
+        finally:
+            self.disconnected.emit()
+            self.on_disconnected(context)

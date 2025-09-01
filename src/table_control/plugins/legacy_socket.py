@@ -41,7 +41,7 @@ class LegacySocketPlugin:
         self.preferences_tab = PreferencesWidget()
         data = self.read_settings(self.settings)
         self.preferences_tab.from_dict(data)
-        dialog.tab_widget.addTab(self.preferences_tab, "Legacy")
+        dialog.tab_widget.addTab(self.preferences_tab, "Legacy TCP")
 
     def after_preferences(self, dialog: PreferencesDialog) -> None:
         if dialog.result() == dialog.DialogCode.Accepted:
