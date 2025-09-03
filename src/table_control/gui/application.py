@@ -13,8 +13,8 @@ class Application:
         self.app = QtWidgets.QApplication(sys.argv)
         self.app.setApplicationName(APP_NAME)
         self.app.setApplicationVersion(APP_VERSION)
-        self.app.setOrganizationName("HEPHY")
-        self.app.setOrganizationDomain("hephy.at")
+        self.app.setOrganizationName("MBI")
+        self.app.setOrganizationDomain("mbi.oeaw.ac.at")
         self.app.setApplicationDisplayName(f"{APP_TITLE} {APP_VERSION}")
         self.app.setWindowIcon(load_icon("table_control.svg"))
 
