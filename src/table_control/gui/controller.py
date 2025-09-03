@@ -235,7 +235,7 @@ class QueryPositionCommand(Command):
 class QueryCalibrationCommand(Command):
     def __call__(self, context) -> None:
         x, y, z = context.driver.calibration_state()
-        context.set_calibration(x, y, z)
+        context.set_calibration(int(x), int(y), int(z))
 
 
 @dataclass(slots=True)

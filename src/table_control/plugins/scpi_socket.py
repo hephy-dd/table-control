@@ -11,7 +11,7 @@ Supported SCPI commands:
 [:]MOVE:ABSolute <POS>     3-axis absolute move
 [:]MOVE:ABORT              abort a movement
 [:]ZLIMit[:VALue]?         get Z limit value
-[:]ZLIMit:ENABled?         is Z limit enabled?
+[:]ZLIMit:ENABle?          is Z limit enabled?
 [:]SYStem:ERRor[:NEXT]?    next error on stack
 [:]SYStem:ERRor:COUNt?     size of error stack
 
@@ -200,12 +200,12 @@ class SocketServer:
         # [:]POSition[:STATe]?
         if re.match(r"^\:?pos(ition)?(\:stat(e)?)?\?$", command):
             x, y, z = self.table.position()
-            return f"{x:.3f} {y:.3f} {z:.3f}"
+            return f"{x:.3f},{y:.3f},{z:.3f}"
 
         # [:]CALibration[:STATe]?
         if re.match(r"^\:?cal(ibration)?(\:stat(e)?)?\?$", command):
             x, y, z = self.table.calibration()
-            return f"{x:d} {y:d} {z:d}"
+            return f"{x:d},{y:d},{z:d}"
 
         # [:]MOVE[:STATe]?
         if re.match(r"^\:?move(\:stat(e)?)?\?$", command):
@@ -215,7 +215,8 @@ class SocketServer:
         # [:]MOVE:RELative X Y Z
         if re.match(r"^\:?move\:rel(ative)?$", command):
             try:
-                _, dx, dy, dz = message.split()
+                _, args = message.split(maxsplit=1)
+                dx, dy, dz = args.split(",")
                 self.table.move_relative(float(dx), float(dy), float(dz))
             except Exception:
                 self.error_stack.append((101, "invalid attributes"))
@@ -225,7 +226,8 @@ class SocketServer:
         # [:]MOVE:ABSolute X Y Z
         if re.match(r"^\:?move\:abs(olute)?$", command):
             try:
-                _, x, y, z = message.split()
+                _, args = message.split(maxsplit=1)
+                x, y, z = args.split(",")
                 self.table.move_absolute(float(x), float(y), float(z))
             except Exception:
                 self.error_stack.append((101, "invalid attributes"))
@@ -233,7 +235,7 @@ class SocketServer:
             return None
 
         # [:]ZLIMit:ENAbled?
-        if re.match(r"^\:?zlim(it)?\:enab(led)?\?$", command):
+        if re.match(r"^\:?zlim(it)?\:enab(le)?\?$", command):
             enabled = self.table.z_limit_enabled
             return "1" if enabled else "0"
 
