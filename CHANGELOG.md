@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- SCPI compliant comma separated argument lists (#11).
+- Renamed SCPI command `ZLIMit:ENABled?"` to compliant form `ZLIMit:ENABle?` (#11).
 - Set application organization name from `HEPHY` to `MBI` (previous settings will be lost).
 
 ## [0.5.0] - 2025-09-01
