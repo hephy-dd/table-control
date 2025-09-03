@@ -1,6 +1,7 @@
 include README.md
 include LICENSE
 include CHANGELOG.md
+include CONTRIBUTING.md
 include tox.ini
 
 include pyinstaller/*

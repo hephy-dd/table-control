@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2025-09-03
+
+### Changed
+
+- SCPI compliant comma separated argument lists (#11).
+- Renamed SCPI command `ZLIMit:ENABled?"` to compliant form `ZLIMit:ENABle?` (#11).
+- Set application organization name from `HEPHY` to `MBI` (previous settings will be lost).
+
 ## [0.5.0] - 2025-09-01
 
 ### Added
@@ -56,7 +64,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for Hydra controller.
 - Support for Corvus controller.
 
-[unreleased]: https://github.com/hephy-dd/table-control/compare/v0.5.0...HEAD
+[unreleased]: https://github.com/hephy-dd/table-control/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/hephy-dd/table-control/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/hephy-dd/table-control/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/hephy-dd/table-control/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/hephy-dd/table-control/compare/v0.2.0...v0.3.0

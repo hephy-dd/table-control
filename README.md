@@ -16,14 +16,14 @@ Make sure to enable and configure the SCPI socket in the application preferences
 |--------|------------|--------|
 |`*IDN?` | application identity | `*IDN?` -> `table-control v0.1.0` |
 |`*CLS` | clears error stack | `*CLS` |
-|`[:]POSition?` | get position | `POS?` -> `0.000 0.000 0.000` |
-|`[:]CALibration[:STATe]?` | get calibration | `CAL?` -> `3 3 3` (`1`=cal, `2`=rm, `3`=cal+rm) |
+|`[:]POSition?` | get position | `POS?` -> `0.000,0.000,0.000` |
+|`[:]CALibration[:STATe]?` | get calibration | `CAL?` -> `3,3,3` (`1`=cal, `2`=rm, `3`=cal+rm) |
 |`[:]MOVE[:STATe]?` | is moving? | `MOVE?` -> `1` |
-|`[:]MOVE:RELative <POS>` | 3-axis relative move | `MOVE:REL 0 0 4.200` |
-|`[:]MOVE:ABSolute <POS>` | 3-axis absolute move | `MOVE:ABS 10.000 20.000 2.000` |
+|`[:]MOVE:RELative <POS>` | 3-axis relative move | `MOVE:REL 0,0,4.200` |
+|`[:]MOVE:ABSolute <POS>` | 3-axis absolute move | `MOVE:ABS 10.000,20.000,2.000` |
 |`[:]MOVE:ABORT` | abort a movement | `MOVE:ABORT` |
 |`[:]ZLIMit[:VALue]?` | get Z limit value | `ZLIM?` -> `2.000` |
-|`[:]ZLIMit:ENABled?` | is Z limit enabled? | `ZLIM:ENAB?` -> `1` |
+|`[:]ZLIMit:ENABle?` | is Z limit enabled? | `ZLIM:ENAB?` -> `1` |
 |`[:]SYStem:ERRor[:NEXT]?` | next error on stack | `SYS:ERR?` -> `0,"no error"` |
 |`[:]SYStem:ERRor:COUNt?` | size of error stack | `SYS:ERR:COUN?` -> `0` |
 
