@@ -22,7 +22,7 @@ version_info = os.path.join(os.getcwd(), "version_info.txt")
 create_versionfile(
     output_file=version_info,
     version=f"{version}.0",
-    company_name="MBI",
+    company_name="MBI Marietta Blau Institute for Particle Physics",
     file_description=meta.get("Summary", ""),
     internal_name="Table Control",
     legal_copyright=f"Copyright © {now.year} MBI. All rights reserved.",
