@@ -1,6 +1,8 @@
 # table-control
 
-Generic 3-axis table control software.
+A generic 3-axis table control software.
+
+Provides a unified interface for supported hardware controllers and exposes both SCPI and legacy TCP command interfaces.
 
 ## Supported Controllers
 
@@ -27,11 +29,11 @@ Make sure to enable and configure the SCPI socket in the application preferences
 |`[:]SYStem:ERRor[:NEXT]?` | next error on stack | `SYS:ERR?` -> `0,"no error"` |
 |`[:]SYStem:ERRor:COUNt?` | size of error stack | `SYS:ERR:COUN?` -> `0` |
 
-All SCPI commands are case insensitive (e.g. `pos?` is equal to `POS?`).
+**Note:** SCPI commands are case-insensitive (e.g. `pos?` is equivalent to `POS?`).
 
 ## Legacy TCP Socket
 
-The application can emulate a legacy TCP commands used with LabView.
+The application can emulate a legacy TCP commands set previously used with LabView at MBI/HEPHY.
 Make sure to enable and configure the TCP socket in the application preferences.
 
 |Command |Description |Example |
@@ -41,7 +43,7 @@ Make sure to enable and configure the TCP socket in the application preferences.
 |`MA=<X>,<Y>,<Z>` | 3-axis absolute move | `MA=10.000,20.000,2.000` |
 |`???` | prints help | |
 
-All legacy TCP commands are case sensitive.
+**Note:** Legacy TCP commands are case-sensitive.
 
 ## Download
 
