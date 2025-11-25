@@ -1,8 +1,0 @@
-include README.md
-include LICENSE
-include CHANGELOG.md
-include CONTRIBUTING.md
-include tox.ini
-
-include src/table_control/assets/*.txt
-include src/table_control/assets/icons/*.ico
