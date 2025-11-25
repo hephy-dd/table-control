@@ -7,9 +7,24 @@ authors = [
 description = "Generic 3-axis table control software."
 readme = "README.md"
 license = {file = "LICENSE"}
+keywords = [
+    "motion-control",
+    "3-axis",
+    "instrumentation",
+    "PySide6",
+    "VISA",
+]
 classifiers = [
-    "Framework :: PyQt5",
-    "Programming Language :: Python :: 3"
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Manufacturing",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator",
+    "Topic :: System :: Hardware",
 ]
 requires-python = ">=3.13"
 dependencies = [
@@ -27,12 +42,17 @@ Documentation = "https://github.com/hephy-dd/table-control"
 table-control = "table_control.__main__:main"
 
 [build-system]
-requires = ["setuptools"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
-[tool.setuptools]
-include-package-data = true
-
-[tool.setuptools.package-data]
-"table_control.assets" = ["*.txt"]
-"table_control.assets.icons" = ["*.svg", "*.ico"]
+[tool.hatch.build.targets.sdist]
+include = [
+  "src/table_control",
+  "README.md",
+  "LICENSE",
+  "CHANGELOG.md",
+  "CONTRIBUTING.md",
+  "pyproject.toml",
+  "tox.ini",
+  "emulators.yml",
+]
