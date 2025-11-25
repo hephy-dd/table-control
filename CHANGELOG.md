@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.6.0] - 2025-09-03
+## [0.6.0] - 2025-11-25
 
 ### Changed
 
@@ -19,6 +19,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 
 - Obsolete setuptools `MANIFEST.in` (#12).
+
+### Fixed
+
+- Disappearing icons on PyInstaller Windows executable (#14).
 
 ## [0.5.0] - 2025-09-01
 

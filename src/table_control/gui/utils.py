@@ -1,15 +1,19 @@
-import importlib.resources
+from importlib import resources
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
 
 def load_icon(filename: str) -> QtGui.QIcon:
-    with importlib.resources.path("table_control.assets.icons", filename) as path:
-        return QtGui.QIcon(str(path))
+    data = resources.read_binary("table_control.assets.icons", filename)
+    pixmap = QtGui.QPixmap()
+    pixmap.loadFromData(data)
+
+    icon = QtGui.QIcon(pixmap)
+    return icon
 
 
 def load_text(filename: str) -> str:
-    with importlib.resources.path("table_control.assets", filename) as path:
+    with resources.path("table_control.assets", filename) as path:
         with open(path, "r") as fp:
             return fp.read()
 
