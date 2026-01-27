@@ -15,6 +15,7 @@ import socket
 import threading
 import time
 import re
+from typing import Final
 
 from PySide6 import QtCore, QtWidgets
 
@@ -22,6 +23,9 @@ from table_control.gui import APP_TITLE, APP_VERSION
 from table_control.gui.preferences import PreferencesDialog
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_HOST: Final[str] = "localhost"
+DEFAULT_PORT: Final[int] = 6345
 
 
 class LegacySocketPlugin:
@@ -57,8 +61,8 @@ class LegacySocketPlugin:
             self.socket_server.shutdown(timeout=60.0)
             self.socket_server = None
         if data.get("enabled", False):
-            hostname = data.get("hostname", "localhost")
-            port = data.get("port", 4001)
+            hostname = data.get("hostname", DEFAULT_HOST)
+            port = data.get("port", DEFAULT_PORT)
             logger.info("legacy socket: starting server on port %s...", port)
             self.socket_server = SocketServer(self.table_controller, hostname, port)
             thread = threading.Thread(target=self.socket_server)
@@ -84,10 +88,20 @@ class PreferencesWidget(QtWidgets.QWidget):
         self.port_spin_box = QtWidgets.QSpinBox(self)
         self.port_spin_box.setRange(0, 65535)
 
+        self.reset_defaults_button = QtWidgets.QPushButton(self)
+        self.reset_defaults_button.setText("Reset to Defaults")
+        self.reset_defaults_button.setToolTip("Restore inputs to their default values")
+        self.reset_defaults_button.clicked.connect(self.reset_defaults)
+
         layout = QtWidgets.QFormLayout(self)
         layout.addRow(self.enabled_check_box)
         layout.addRow("Hostname", self.hostname_line_edit)
         layout.addRow("Port", self.port_spin_box)
+        layout.addWidget(self.reset_defaults_button)
+
+    def reset_defaults(self) -> None:
+        self.set_hostname(DEFAULT_HOST)
+        self.set_port(DEFAULT_PORT)
 
     def hostname(self) -> str:
         return self.hostname_line_edit.text().strip()
@@ -115,8 +129,8 @@ class PreferencesWidget(QtWidgets.QWidget):
         }
 
     def from_dict(self, data: dict) -> None:
-        self.set_hostname(data.get("hostname", "localhost"))
-        self.set_port(data.get("port", 4001))
+        self.set_hostname(data.get("hostname", DEFAULT_HOST))
+        self.set_port(data.get("port", DEFAULT_PORT))
         self.set_server_enabled(data.get("enabled", False))
 
 
@@ -142,7 +156,7 @@ class SocketServer:
                     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     s.bind((self.host, self.port))
                     s.listen()
-                    logger.info("Legacy socket: listening on: %s:%s", self.host, self.port)
+                    logger.info("legacy socket: listening on: %s:%s", self.host, self.port)
 
                     while True:
                         ready, _, _ = select.select([s], [], [], self.timeout)
@@ -176,13 +190,19 @@ class SocketServer:
 
     def handle_message(self, message: str) -> str | None:
         command = message.strip().split("=")[0]
-        error_response = "Command not valid !"
+        response_not_valid = "Command not valid !"
+        response_error = "Error !"
+        response_done = "Done ..."
 
         # PO?
         if command == "PO?":
-            x, y, z = self.table.position()
-            status = 0  # TODO!
-            return f"{x:.6f},{y:.6f},{z:.6f},{status:d}"
+            try:
+                x, y, z = self.table.position()
+                status = self.table.is_moving()
+                return f"{x:.6f},{y:.6f},{z:.6f},{status:d}"
+            except Exception as exc:
+                logger.error(exc)
+                return response_error
 
         # MR=DELTA,AXIS
         if command == "MR":
@@ -193,20 +213,30 @@ class SocketServer:
                 delta_vector: list[float] = [0.0, 0.0, 0.0]
                 delta_vector[axis_index] = float(delta)
                 x, y, z = delta_vector
+            except Exception as exc:
+                logger.error(exc)
+                return response_not_valid
+            try:
                 self.table.move_relative(float(x), float(y), float(z))
-            except Exception:
-                return error_response
-            return None
+                return response_done
+            except Exception as exc:
+                logger.error(exc)
+                return response_error
 
         # MA=X,Y,Z
         if command == "MA":
             try:
                 _, args = message.split("=")
                 x, y, z = args.split(",")
+            except Exception as exc:
+                logger.error(exc)
+                return response_not_valid
+            try:
                 self.table.move_absolute(float(x), float(y), float(z))
-            except Exception:
-                return error_response
-            return None
+                return response_done
+            except Exception as exc:
+                logger.error(exc)
+                return response_error
 
         # ???
         if command == "???":
@@ -218,4 +248,4 @@ class SocketServer:
                 "??? - This command",
             ])
 
-        return error_response
+        return response_not_valid

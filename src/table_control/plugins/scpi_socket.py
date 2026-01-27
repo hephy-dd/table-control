@@ -25,6 +25,7 @@ import socket
 import threading
 import time
 import re
+from typing import Final
 
 from PySide6 import QtCore, QtWidgets
 
@@ -32,6 +33,9 @@ from table_control.gui import APP_TITLE, APP_VERSION
 from table_control.gui.preferences import PreferencesDialog
 
 logger = logging.getLogger(__name__)
+
+DEFAULT_HOST: Final[str] = "localhost"
+DEFAULT_PORT: Final[int] = 4000
 
 
 class SCPISocketPlugin:
@@ -67,8 +71,8 @@ class SCPISocketPlugin:
             self.socket_server.shutdown(timeout=60.0)
             self.socket_server = None
         if data.get("enabled", False):
-            hostname = data.get("hostname", "localhost")
-            port = data.get("port", 4000)
+            hostname = data.get("hostname", DEFAULT_HOST)
+            port = data.get("port", DEFAULT_PORT)
             logger.info("SCPI socket: starting server on port %s...", port)
             self.socket_server = SocketServer(self.table_controller, hostname, port)
             thread = threading.Thread(target=self.socket_server)
@@ -94,10 +98,20 @@ class PreferencesWidget(QtWidgets.QWidget):
         self.port_spin_box = QtWidgets.QSpinBox(self)
         self.port_spin_box.setRange(0, 65535)
 
+        self.reset_defaults_button = QtWidgets.QPushButton(self)
+        self.reset_defaults_button.setText("Reset to Defaults")
+        self.reset_defaults_button.setToolTip("Restore inputs to their default values")
+        self.reset_defaults_button.clicked.connect(self.reset_defaults)
+
         layout = QtWidgets.QFormLayout(self)
         layout.addRow(self.enabled_check_box)
         layout.addRow("Hostname", self.hostname_line_edit)
         layout.addRow("Port", self.port_spin_box)
+        layout.addWidget(self.reset_defaults_button)
+
+    def reset_defaults(self) -> None:
+        self.set_hostname(DEFAULT_HOST)
+        self.set_port(DEFAULT_PORT)
 
     def hostname(self) -> str:
         return self.hostname_line_edit.text().strip()
@@ -125,8 +139,8 @@ class PreferencesWidget(QtWidgets.QWidget):
         }
 
     def from_dict(self, data: dict) -> None:
-        self.set_hostname(data.get("hostname", "localhost"))
-        self.set_port(data.get("port", 4000))
+        self.set_hostname(data.get("hostname", DEFAULT_HOST))
+        self.set_port(data.get("port", DEFAULT_PORT))
         self.set_server_enabled(data.get("enabled", False))
 
 
@@ -200,7 +214,7 @@ class SocketServer:
         # [:]POSition[:STATe]?
         if re.match(r"^\:?pos(ition)?(\:stat(e)?)?\?$", command):
             x, y, z = self.table.position()
-            return f"{x:.3f},{y:.3f},{z:.3f}"
+            return f"{x:.6f},{y:.6f},{z:.6f}"
 
         # [:]CALibration[:STATe]?
         if re.match(r"^\:?cal(ibration)?(\:stat(e)?)?\?$", command):
