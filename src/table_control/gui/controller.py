@@ -10,7 +10,7 @@ from typing import Any, Callable, Iterator, Sequence, TypedDict
 
 from PySide6 import QtCore
 
-from ..core.driver import Driver, Vector
+from ..core.driver import Driver, Vector, VectorMask
 from ..core.resource import create_resource
 
 logger = logging.getLogger(__name__)
@@ -188,30 +188,30 @@ class MoveAbsoluteCommand(Command):
 
 @dataclass(slots=True, frozen=True)
 class CalibrateCommand(Command):
-    x: int
-    y: int
-    z: int
+    x: bool
+    y: bool
+    z: bool
 
     def __call__(self, context) -> None:
         context.set_moving(True)
         try:
             logger.info("calibrate: x=%d y=%d z=%d", self.x, self.y, self.z)
-            context.perform_motion(lambda driver: driver.calibrate(Vector(self.x, self.y, self.z)))
+            context.perform_motion(lambda driver: driver.calibrate(VectorMask(self.x, self.y, self.z)))
         finally:
             context.set_moving(False)
 
 
 @dataclass(slots=True, frozen=True)
 class RangeMeasureCommand(Command):
-    x: int
-    y: int
-    z: int
+    x: bool
+    y: bool
+    z: bool
 
     def __call__(self, context) -> None:
         context.set_moving(True)
         try:
             logger.info("range measure: x=%d y=%d z=%d", self.x, self.y, self.z)
-            context.perform_motion(lambda driver: driver.range_measure(Vector(self.x, self.y, self.z)))
+            context.perform_motion(lambda driver: driver.range_measure(VectorMask(self.x, self.y, self.z)))
         finally:
             context.set_moving(False)
 
@@ -366,17 +366,17 @@ class TableController(AbstractController):
     def request_calibration_state(self) -> None:
         self.put_command(QueryCalibrationCommand())
 
-    def move_relative(self, x, y, z):
+    def move_relative(self, x: float, y: float, z: float) -> None:
         self.put_command(MoveRelativeCommand(x, y, z))
 
-    def move_absolute(self, x, y, z):
+    def move_absolute(self, x: float, y: float, z: float) -> None:
         z_limit = self._state.z_limit if self._state.z_limit_enabled else None
         self.put_command(MoveAbsoluteCommand(x, y, z, z_limit))
 
-    def calibrate(self, x, y, z):
+    def calibrate(self, x: bool, y: bool, z: bool) -> None:
         self.put_command(CalibrateCommand(x, y, z))
 
-    def range_measure(self, x, y, z):
+    def range_measure(self, x: bool, y: bool, z: bool) -> None:
         self.put_command(RangeMeasureCommand(x, y, z))
 
     def set_update_interval(self, interval: float) -> None:

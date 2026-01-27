@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from typing import Iterable
 
 from .resource import Resource
-from .vector import Vector
+from .vector import Vector, VectorMask
 
 __all__ = ["Driver"]
 
@@ -45,11 +45,11 @@ class Driver(ABC):
         ...
 
     @abstractmethod
-    def calibrate(self, axes: Vector) -> None:
+    def calibrate(self, axes: VectorMask) -> None:
         ...
 
     @abstractmethod
-    def range_measure(self, axes: Vector) -> None:
+    def range_measure(self, axes: VectorMask) -> None:
         ...
 
     @abstractmethod

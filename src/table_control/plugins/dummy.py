@@ -1,6 +1,6 @@
 import time
 
-from table_control.core.driver import Driver, Vector
+from table_control.core.driver import Driver, Vector, VectorMask
 
 __all__ = ["DummyPlugin"]
 
@@ -114,11 +114,11 @@ class DummyDriver(Driver):
         self._t_start = time.monotonic()
         self._moving  = True
 
-    def calibrate(self, axes: Vector) -> None:
-        x, y, z = axes  # no-op for now
+    def calibrate(self, axes: VectorMask) -> None:
+        ...
 
-    def range_measure(self, axes: Vector) -> None:
-        x, y, z = axes  # no-op for now
+    def range_measure(self, axes: VectorMask) -> None:
+        ...
 
     def enable_joystick(self, value: bool) -> None:
         ...
