@@ -1,3 +1,6 @@
+from pyvisa.errors import VisaIOError
+from pyvisa.resources import MessageBasedResource
+
 from table_control.core.driver import Driver, Vector
 
 __all__ = ["CorvusPlugin"]
@@ -15,6 +18,20 @@ class CorvusPlugin:
 def to_vector(s: str) -> Vector:
     x, y, z = s.split()[:3]
     return Vector(float(x), float(y), float(z))
+
+
+def drain(resource: MessageBasedResource, max_reads=100) -> None:
+    timeout = resource.timeout
+    resource.timeout = 200
+    try:
+        for _ in range(max_reads):
+            try:
+                _ = resource.read()
+            except VisaIOError:
+                # timeout => nothing left
+                break
+    finally:
+        resource.timeout = timeout
 
 
 def identity(resource) -> str:
@@ -35,6 +52,7 @@ class CorvusDriver(Driver):
 
     def configure(self) -> None:
         self.resources[0].write("0 mode")  # host mode
+        drain(self.resources[0].resource)
 
     def abort(self) -> None:
         self.resources[0].write(chr(0x03))  # Ctrl+C
