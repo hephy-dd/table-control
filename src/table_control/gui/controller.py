@@ -440,7 +440,7 @@ class TableController(AbstractController):
         self.info_changed.emit(format(info))
 
     def on_disconnected(self, context) -> None:
-        logger.info("Disonnected")
+        logger.info("Disconnected")
 
     def on_exception(self, context, exc) -> bool:
         if isinstance(exc, AbortRequest):
@@ -450,7 +450,7 @@ class TableController(AbstractController):
             self.movement_finished.emit()
             return True
         elif isinstance(exc, CalibrationError):
-            logger.info(str(exc))
+            logger.error(str(exc))
             return True
         return False
 
@@ -484,5 +484,7 @@ class TableController(AbstractController):
                     if not self.on_exception(context, exc):
                         raise
         finally:
-            self.disconnected.emit()
-            self.on_disconnected(context)
+            try:
+                self.on_disconnected(context)
+            finally:
+                self.disconnected.emit()

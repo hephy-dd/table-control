@@ -20,7 +20,8 @@ def to_vector(s: str) -> Vector:
     return Vector(float(x), float(y), float(z))
 
 
-def drain(resource: MessageBasedResource, max_reads=100) -> None:
+def drain(resource: MessageBasedResource, max_reads: int = 100) -> None:
+    """Helper to drain junk bytes from serial buffers."""
     timeout = resource.timeout
     resource.timeout = 200
     try:
