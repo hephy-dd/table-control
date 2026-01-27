@@ -1,4 +1,5 @@
 from pyvisa.errors import VisaIOError
+from pyvisa.constants import StatusCode
 from pyvisa.resources import MessageBasedResource
 
 from table_control.core.driver import Driver, Vector
@@ -28,9 +29,10 @@ def drain(resource: MessageBasedResource, max_reads: int = 100) -> None:
         for _ in range(max_reads):
             try:
                 _ = resource.read()
-            except VisaIOError:
-                # timeout => nothing left
-                break
+            except VisaIOError as exc:
+                if exc.error_code == StatusCode.error_timeout:
+                    break
+                raise
     finally:
         resource.timeout = timeout
 
@@ -52,15 +54,19 @@ class CorvusDriver(Driver):
         return [identity(res) for res in self.resources]
 
     def configure(self) -> None:
-        self.resources[0].write("0 mode")  # host mode
-        drain(self.resources[0].resource)
+        resource = self.resources[0]
+        resource.write("0 mode")  # host mode
+        drain(resource.resource)  # HACK drain serial buffer
 
     def abort(self) -> None:
         self.resources[0].write(chr(0x03))  # Ctrl+C
 
     def calibration_state(self) -> Vector:
-        x, y, z = map(int, self.resources[0].query("-1 getcaldone").split())
-        return Vector(x, y, z)  # TODO
+        resource = self.resources[0]
+        x = resource.query("1 getcaldone")
+        y = resource.query("2 getcaldone")
+        z = resource.query("3 getcaldone")
+        return Vector(float(x), float(y), float(z))  # TODO
 
     def position(self) -> Vector:
         return to_vector(self.resources[0].query("pos"))
@@ -77,22 +83,24 @@ class CorvusDriver(Driver):
         self.resources[0].write(f"{x:.6f} {y:.6f} {z:.6f} move")
 
     def calibrate(self, axes: Vector) -> None:
+        resource = self.resources[0]
         x, y, z = axes
         if x:
-            self.resources[0].write(f"1 ncal")
+            resource.write(f"1 ncal")
         if y:
-            self.resources[0].write(f"2 ncal")
+            resource.write(f"2 ncal")
         if z:
-            self.resources[0].write(f"3 ncal")
+            resource.write(f"3 ncal")
 
     def range_measure(self, axes: Vector) -> None:
+        resource = self.resources[0]
         x, y, z = axes
         if x:
-            self.resources[0].write(f"1 nrm")
+            resource.write(f"1 nrm")
         if y:
-            self.resources[0].write(f"2 nrm")
+            resource.write(f"2 nrm")
         if z:
-            self.resources[0].write(f"3 nrm")
+            resource.write(f"3 nrm")
 
     def enable_joystick(self, value: bool) -> None:
         self.resources[0].write(f"{value:d} joystick")
