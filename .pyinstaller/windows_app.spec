@@ -2,6 +2,7 @@ import importlib.metadata
 import os
 from datetime import datetime
 
+from PyInstaller.utils.hooks import collect_dynamic_libs, collect_submodules
 from pyinstaller_versionfile import create_versionfile
 
 import table_control
@@ -30,22 +31,27 @@ create_versionfile(
     product_name="Table Control",
 )
 
+binaries=[]
+binaries.extend(collect_dynamic_libs("libusb_package"))
+
+hiddenimports=[]
+hiddenimports.extend(collect_submodules("pyvisa"))
+hiddenimports.extend(collect_submodules("pyvisa_py"))
+hiddenimports.extend(collect_submodules("serial"))
+hiddenimports.extend(collect_submodules("usb"))
+hiddenimports.extend(collect_submodules("libusb_package"))
+hiddenimports.extend(collect_submodules("gpib_ctypes"))
+
 a = Analysis(
     ["entry_point.py"],
     pathex=[os.getcwd()],
-    binaries=[],
+    binaries=binaries,
     datas=[
         (os.path.join(package_root, "assets", "*.txt"), os.path.join("table_control", "assets")),
         (os.path.join(package_root, "assets", "icons", "*.ico"), os.path.join("table_control", "assets", "icons")),
         (os.path.join(package_root, "assets", "icons", "*.svg"), os.path.join("table_control", "assets", "icons")),
     ],
-    hiddenimports=[
-        "pyvisa",
-        "pyvisa_py",
-        "serial",
-        "usb",
-        "gpib_ctypes",
-    ],
+    hiddenimports=hiddenimports,
     hookspath=[],
     runtime_hooks=[],
     excludes=[],
