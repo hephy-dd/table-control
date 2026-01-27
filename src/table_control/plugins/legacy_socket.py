@@ -143,6 +143,7 @@ class SocketServer:
         self.host: str = host
         self.port: int = port
         self.timeout: float = 1.0
+        self.termination: str = "\r\n"
 
     def shutdown(self, timeout: float | None = None) -> None:
         self.shutdown_requested.set()
@@ -182,7 +183,7 @@ class SocketServer:
                     logger.info("legacy socket: received: %s", line)
                     resp = self.handle_message(line)
                     if resp is not None:
-                        conn.sendall(f"{resp}\n".encode())
+                        conn.sendall(f"{resp}{self.termination}".encode())
         except Exception as exc:
             logger.exception(exc)
         finally:
@@ -240,6 +241,7 @@ class SocketServer:
 
         # ???
         if command == "???":
+            # Note: Corvus Controller v3.0.2 bug sends "\n\r"
             return "\n".join([
                 "Command list:",
                 "PO? - Get Table Position and Status",

@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Legacy SCPI now returns the axis moving state correctly in `PO?` (#17).
+- Legacy SCPI now termiantes mesages with `\r\n` (#20)
 - Added missing modules and libraries in the PyInstaller Windows executable.
 
 ## [0.6.0] - 2025-11-25
