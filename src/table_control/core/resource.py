@@ -8,16 +8,24 @@ __all__ = ["Resource"]
 
 class Resource:
 
-    def __init__(self, resource_name: str, visa_library: str | None = None, **options) -> None:
+    def __init__(self, resource_name: str, visa_library: str | None = None, baud_rate: int | None = None, **options) -> None:
         self.resource_name: str = resource_name
-        self.visa_library: str = visa_library or ""
+        self.visa_library: str | None = visa_library
+        self.baud_rate: int | None = baud_rate
         self.options: dict = options
         self.resource: Any = None
 
     def __enter__(self):
         try:
-            rm = pyvisa.ResourceManager(self.visa_library)
+            if self.visa_library is not None:
+                rm = pyvisa.ResourceManager(self.visa_library)
+            else:
+                rm = pyvisa.ResourceManager()
             self.resource = rm.open_resource(self.resource_name, **self.options)
+
+            if self.baud_rate is not None:
+                if hasattr(self.resource, "baud_rate"):
+                    self.resource.baud_rate = int(self.baud_rate)
         except Exception as exc:
             raise RuntimeError(f"Failed to open resource {self.resource_name!r}") from exc
         logging.debug("opened resource: %r", self.resource_name)
@@ -49,5 +57,6 @@ class Resource:
 def create_resource(resource: dict[str, Any]) -> Resource:
     resource_name: str = resource.get("resource_name", "")
     visa_library: str = resource.get("visa_library", "@py")
+    baud_rate: int | None = resource.get("baud_rate")
     options: dict = resource.get("options", {})
-    return Resource(resource_name, visa_library, **options)
+    return Resource(resource_name, visa_library, baud_rate, **options)

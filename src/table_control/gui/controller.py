@@ -89,6 +89,7 @@ class AbstractController(QtCore.QObject):
                     self.event_pump(command)
             except Exception as exc:
                 logger.exception(exc)
+                self.disconnected.emit()
 
     def event_pump(self, command: Command) -> None:
         time.sleep(0.01)

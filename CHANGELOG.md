@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Restore to defaults buttons for preferences input forms (#16).
+- Support for ASRL/COM resources (#21).
+- Tests for `core.utils` module.
 
 ### Changed
 
