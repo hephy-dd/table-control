@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-01-28
+
+### Added
+
+- Added lock button in calibration tab and added notice (#27).
+
+### Fixed
+
+- Increased the precision of stored position values to 6 decimal places (#25).
+
 ## [0.7.0] - 2026-01-27
 
 ### Added
@@ -93,7 +103,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for Hydra controller.
 - Support for Corvus controller.
 
-[unreleased]: https://github.com/hephy-dd/table-control/compare/v0.7.0...HEAD
+[unreleased]: https://github.com/hephy-dd/table-control/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/hephy-dd/table-control/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/hephy-dd/table-control/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/hephy-dd/table-control/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/hephy-dd/table-control/compare/v0.4.0...v0.5.0
