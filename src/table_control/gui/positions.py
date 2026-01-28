@@ -31,11 +31,11 @@ def get_position(item) -> TablePosition:
 
 def set_position(item, position: TablePosition) -> None:
     item.setText(0, position.name)
-    item.setText(1, f"{position.x:.3f}")
+    item.setText(1, f"{position.x:.6f}")
     item.setData(1, QtCore.Qt.ItemDataRole.UserRole, position.x)
-    item.setText(2, f"{position.y:.3f}")
+    item.setText(2, f"{position.y:.6f}")
     item.setData(2, QtCore.Qt.ItemDataRole.UserRole, position.y)
-    item.setText(3, f"{position.z:.3f}")
+    item.setText(3, f"{position.z:.6f}")
     item.setData(3, QtCore.Qt.ItemDataRole.UserRole, position.z)
     item.setText(4, position.comment)
 
@@ -205,17 +205,17 @@ class TablePositionEditDialog(QtWidgets.QDialog):
         self.nameLineEdit = QtWidgets.QLineEdit(self)
 
         self.xSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.xSpinBox.setDecimals(3)
+        self.xSpinBox.setDecimals(6)
         self.xSpinBox.setRange(-9999, +9999)
         self.xSpinBox.setSuffix(" mm")
 
         self.ySpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.ySpinBox.setDecimals(3)
+        self.ySpinBox.setDecimals(6)
         self.ySpinBox.setRange(-9999, +9999)
         self.ySpinBox.setSuffix(" mm")
 
         self.zSpinBox = QtWidgets.QDoubleSpinBox(self)
-        self.zSpinBox.setDecimals(3)
+        self.zSpinBox.setDecimals(6)
         self.zSpinBox.setRange(-9999, +9999)
         self.zSpinBox.setSuffix(" mm")
 

@@ -164,6 +164,21 @@ class DashboardWidget(QtWidgets.QWidget):
         self.z_rm_button.setMaximumWidth(54)
         self.z_rm_button.clicked.connect(lambda: self.range_measure(False, False, True))
 
+        self.lock_calibration_button = QtWidgets.QPushButton("Unlock")
+        self.lock_calibration_button.setCheckable(True)
+        self.lock_calibration_button.setChecked(False)
+        self.lock_calibration_button.setStatusTip("Unlocks calibration for 5 seconds")
+        self.lock_calibration_button.toggled.connect(self.update_calibration_lock)
+
+        self.lock_calibration_label = QtWidgets.QLabel(self)
+        self.lock_calibration_label.setText("Calibration is locked to prevent hardware damage.")
+
+        self.lock_calibration_timeout: int = 5_000
+
+        self.lock_calibration_timer = QtCore.QTimer(self)
+        self.lock_calibration_timer.setSingleShot(True)
+        self.lock_calibration_timer.timeout.connect(self.lock_calibration_inputs)
+
         self.update_interval_spin_box = QtWidgets.QDoubleSpinBox(self)
         self.update_interval_spin_box.setDecimals(2)
         self.update_interval_spin_box.setRange(0.01, 60.)
@@ -221,6 +236,10 @@ class DashboardWidget(QtWidgets.QWidget):
         z_calibration_layout.addWidget(self.z_cal_button)
         z_calibration_layout.addWidget(self.z_rm_button)
 
+        lock_calibration_layout = QtWidgets.QHBoxLayout()
+        lock_calibration_layout.addWidget(self.lock_calibration_button)
+        lock_calibration_layout.addWidget(self.lock_calibration_label)
+
         calibration_layout = QtWidgets.QGridLayout()
         calibration_layout.addWidget(QtWidgets.QLabel("X"), 0, 0)
         calibration_layout.addWidget(QtWidgets.QLabel("Y"), 0, 1)
@@ -271,6 +290,7 @@ class DashboardWidget(QtWidgets.QWidget):
         calibration_widget_layout.addLayout(x_calibration_layout, 1, 0)
         calibration_widget_layout.addLayout(y_calibration_layout, 1, 1)
         calibration_widget_layout.addLayout(z_calibration_layout, 1, 2)
+        calibration_widget_layout.addLayout(lock_calibration_layout, 3, 0, 1, 3)
         calibration_widget_layout.setColumnStretch(3, 1)
         calibration_widget_layout.setRowStretch(2, 1)
 
@@ -307,15 +327,12 @@ class DashboardWidget(QtWidgets.QWidget):
             self.down_button,
             self.move_rel_button,
             self.move_abs_button,
-            self.x_cal_button,
-            self.y_cal_button,
-            self.z_cal_button,
-            self.x_rm_button,
-            self.y_rm_button,
-            self.z_rm_button,
+            self.calibration_widget,
             self.z_limit_enabled_check_box,
             self.z_limit_spin_box,
         ]
+
+        self.update_calibration_lock(False)
 
     def update_interval(self) -> float:
         return self.update_interval_spin_box.value()
@@ -397,6 +414,20 @@ class DashboardWidget(QtWidgets.QWidget):
     def absolute_move(self, x, y, z) -> None:
         self.move_requested.emit()
         self.absolute_move_requested.emit(x, y, z)
+
+    def update_calibration_lock(self, enabled: bool) -> None:
+        self.x_cal_button.setEnabled(enabled)
+        self.y_cal_button.setEnabled(enabled)
+        self.z_cal_button.setEnabled(enabled)
+        self.x_rm_button.setEnabled(enabled)
+        self.y_rm_button.setEnabled(enabled)
+        self.z_rm_button.setEnabled(enabled)
+        self.lock_calibration_label.setEnabled(not enabled)
+        if enabled:
+            self.lock_calibration_timer.start(self.lock_calibration_timeout)
+
+    def lock_calibration_inputs(self) -> None:
+        self.update_calibration_lock(False)
 
     def calibrate(self, x, y, z) -> None:
         self.move_requested.emit()
