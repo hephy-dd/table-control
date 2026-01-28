@@ -11,20 +11,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Restore to defaults buttons for preferences input forms (#16).
+- Restore-to-defaults buttons for preference input forms (#16).
 - Support for ASRL/COM resources (#21).
-- Tests for `core.utils` module.
+- Tests for the `core.utils` module.
 
 ### Changed
 
-- Increased precision of position values to 6 decimal places in UI and SCPI responses (#19).
-- Legacy SCPI default port changed to 6345 (#18).
+- Increased the precision of position values to 6 decimal places in the UI and SCPI responses (#19).
+- Changed the legacy SCPI default port to 6345 (#18).
 
 ### Fixed
 
 - Legacy SCPI now returns the axis moving state correctly in `PO?` (#17).
-- Legacy SCPI now terminates mesages with `\r\n` (#20)
-- Added missing modules and libraries in the PyInstaller Windows executable.
+- Legacy SCPI now terminates messages with `\r\n` (#20).
+- Clear the Corvus buffer after setting `0 mode` (#23).
+- Added missing modules and libraries to the PyInstaller Windows executable.
 
 ## [0.6.0] - 2025-11-25
 
