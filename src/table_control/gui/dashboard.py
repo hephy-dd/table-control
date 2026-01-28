@@ -427,9 +427,10 @@ class DashboardWidget(QtWidgets.QWidget):
             self.lock_calibration_timer.start(self.lock_calibration_timeout)
 
     def lock_calibration_inputs(self) -> None:
-        self.update_calibration_lock(False)
+        self.lock_calibration_button.setChecked(False)
 
     def calibrate(self, x, y, z) -> None:
+        self.lock_calibration_inputs()
         self.move_requested.emit()
         self.calibrate_requested.emit(x, y, z)
         if x:
@@ -440,6 +441,7 @@ class DashboardWidget(QtWidgets.QWidget):
             self.z_calibration_line_edit.clear()
 
     def range_measure(self, x, y, z) -> None:
+        self.lock_calibration_inputs()
         self.move_requested.emit()
         self.range_measure_requested.emit(x, y, z)
         if x:
