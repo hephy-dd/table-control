@@ -1,4 +1,5 @@
-from table_control.core.driver import Driver, Vector
+from table_control.core.driver import Driver, Vector, VectorMask
+from table_control.core.resource  import Resource
 
 __all__ = ["Hydra2xPlugin"]
 
@@ -6,17 +7,17 @@ __all__ = ["Hydra2xPlugin"]
 class Hydra2xPlugin:
 
     def install(self, window) -> None:
-        window.register_appliance("Hydra 2x", {"driver": Hydra2xDriver, "resources": 2})
+        window.register_connection("Hydra 2x", Hydra2xDriver, 2)
 
     def uninstall(self, window) -> None:
         ...
 
 
-def identity(resource) -> str:
+def identity(resource: Resource) -> str:
     return " ".join([
-        resource.query("identify"),
-        resource.query("version"),
-        resource.query("getserialno"),
+        resource.query("identify").strip(),
+        resource.query("version").strip(),
+        resource.query("getserialno").strip(),
     ])
 
 
@@ -64,22 +65,20 @@ class Hydra2xDriver(Driver):
         self.resources[0].write(f"{x:.6f} {y:.6f} m")
         self.resources[1].write(f"{z:.6f} 0 m")
 
-    def calibrate(self, axes: Vector) -> None:
-        x, y, z = axes
-        if x:
+    def calibrate(self, axes: VectorMask) -> None:
+        if axes.x:
             self.resources[0].write(f"1 ncal")
-        if y:
+        if axes.y:
             self.resources[0].write(f"2 ncal")
-        if z:
+        if axes.z:
             self.resources[1].write(f"1 ncal")
 
-    def range_measure(self, axes: Vector) -> None:
-        x, y, z = axes
-        if x:
+    def range_measure(self, axes: VectorMask) -> None:
+        if axes.x:
             self.resources[0].write(f"1 nrm")
-        if y:
+        if axes.y:
             self.resources[0].write(f"2 nrm")
-        if z:
+        if axes.z:
             self.resources[1].write(f"1 nrm")
 
     def enable_joystick(self, value: bool) -> None:

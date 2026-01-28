@@ -6,12 +6,13 @@ import webbrowser
 
 from PySide6 import QtCore, QtGui, QtStateMachine, QtWidgets
 
+from ..core.driver import Driver
 from ..core.pluginmanager import PluginManager
 
 from . import APP_TITLE, APP_VERSION, APP_CONTENTS_URL
 from .preferences import PreferencesDialog
 from .controller import TableController
-from .connection import ConnectionDialog
+from .connection import ConnectionConfig, ConnectionDialog
 from .dashboard import DashboardWidget, TablePosition
 from .utils import load_icon, load_text
 
@@ -28,7 +29,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.table_controller = TableController()
         self.table_controller.failed.connect(self.show_exception)
 
-        self.appliances: dict[str, dict] = {}
+        self.connection_configs: dict[str, ConnectionConfig] = {}
 
         self.quit_action = QtGui.QAction(self)
         self.quit_action.setText("&Quit")
@@ -162,8 +163,8 @@ class MainWindow(QtWidgets.QMainWindow):
     def uninstall_plugins(self) -> None:
         self.plugin_manager.dispatch("uninstall", (self,))
 
-    def register_appliance(self, name: str, appliance: dict) -> None:
-        self.appliances.update({name: appliance})
+    def register_connection(self, name: str, driver_cls: type[Driver], n_resources: int) -> None:
+        self.connection_configs.update({name: ConnectionConfig(name, driver_cls, n_resources)})
 
     def read_settings(self) -> None:
         settings = self.settings
@@ -268,13 +269,13 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def setup_connection(self) -> bool:
         dialog = ConnectionDialog(self)
-        for name, appliance in self.appliances.items():
-            dialog.add_appliance(name, appliance)
+        for connection_config in self.connection_configs.values():
+            dialog.add_connection(connection_config)
         dialog.read_settings()
         dialog.exec()
         if dialog.result() == dialog.DialogCode.Accepted:
             dialog.write_settings()
-            self.table_controller.set_appliance(dialog.appliance())
+            self.table_controller.set_connection(dialog.create_connection())
         return dialog.result() == dialog.DialogCode.Accepted
 
     @QtCore.Slot()

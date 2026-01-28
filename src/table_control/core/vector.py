@@ -1,12 +1,24 @@
-__all__ = ["Vector"]
+from dataclasses import dataclass
+from typing import Iterator
+
+__all__ = ["Vector", "VectorMask"]
 
 
+@dataclass(frozen=False, slots=True)
 class Vector:
+    x: float
+    y: float
+    z: float
 
-    def __init__(self, x: float, y: float, z: float) -> None:
-        self.x: float = float(x)
-        self.y: float = float(y)
-        self.z: float = float(z)
+    def __iter__(self) -> Iterator[float]:
+        return iter([self.x, self.y, self.z])
 
-    def __iter__(self):
+
+@dataclass(frozen=False, slots=True)
+class VectorMask:
+    x: bool
+    y: bool
+    z: bool
+
+    def __iter__(self) -> Iterator[float]:
         return iter([self.x, self.y, self.z])

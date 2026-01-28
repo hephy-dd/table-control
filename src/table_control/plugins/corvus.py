@@ -1,4 +1,9 @@
-from table_control.core.driver import Driver, Vector
+from pyvisa.errors import VisaIOError
+from pyvisa.constants import StatusCode
+from pyvisa.resources import MessageBasedResource
+
+from table_control.core.driver import Driver, Vector, VectorMask
+from table_control.core.resource import Resource
 
 __all__ = ["CorvusPlugin"]
 
@@ -6,21 +11,17 @@ __all__ = ["CorvusPlugin"]
 class CorvusPlugin:
 
     def install(self, window) -> None:
-        window.register_appliance("Corvus", {"driver": CorvusDriver, "resources": 1})
+        window.register_connection("Corvus", CorvusDriver, 1)
 
     def uninstall(self, window) -> None:
         ...
 
 
-def to_vector(s: str) -> Vector:
-    x, y, z = s.split()[:3]
-    return Vector(float(x), float(y), float(z))
-
-
-def identity(resource) -> str:
+def identity(resource: Resource) -> str:
     return " ".join([
-        resource.query("identify"),
-        resource.query("version")
+        resource.query("identify").strip(),
+        resource.query("version").strip(),
+        resource.query("getserialno").strip(),
     ])
 
 
@@ -34,46 +35,54 @@ class CorvusDriver(Driver):
         return [identity(res) for res in self.resources]
 
     def configure(self) -> None:
-        self.resources[0].write("0 mode")  # host mode
+        self._write("0 mode")  # host mode, writes control bytes to buffer
+        self._query("version")  # drain control bytes from buffer
 
     def abort(self) -> None:
-        self.resources[0].write(chr(0x03))  # Ctrl+C
+        self._write(chr(0x03))  # Ctrl+C
 
     def calibration_state(self) -> Vector:
-        x, y, z = map(int, self.resources[0].query("-1 getcaldone").split())
-        return Vector(x, y, z)  # TODO
+        x = self._query("1 getcaldone")
+        y = self._query("2 getcaldone")
+        z = self._query("3 getcaldone")
+        return Vector(float(x), float(y), float(z))  # TODO
 
     def position(self) -> Vector:
-        return to_vector(self.resources[0].query("pos"))
+        x, y, z = self._query("pos").split()
+        return Vector(float(x), float(y), float(z))
 
     def is_moving(self) -> bool:
-        return test_state(int(self.resources[0].query(f"status")), 0x1)
+        return test_state(int(self._query("status")), 0x1)
 
     def move_relative(self, delta: Vector) -> None:
         x, y, z = delta
-        self.resources[0].write(f"{x:.6f} {y:.6f} {z:.6f} rmove")
+        self._write(f"{x:.6f} {y:.6f} {z:.6f} rmove")
 
     def move_absolute(self, position: Vector) -> None:
         x, y, z = position
-        self.resources[0].write(f"{x:.6f} {y:.6f} {z:.6f} move")
+        self._write(f"{x:.6f} {y:.6f} {z:.6f} move")
 
-    def calibrate(self, axes: Vector) -> None:
-        x, y, z = axes
-        if x:
-            self.resources[0].write(f"1 ncal")
-        if y:
-            self.resources[0].write(f"2 ncal")
-        if z:
-            self.resources[0].write(f"3 ncal")
+    def calibrate(self, axes: VectorMask) -> None:
+        if axes.x:
+            self._write("1 ncal")
+        if axes.y:
+            self._write("2 ncal")
+        if axes.z:
+            self._write("3 ncal")
 
-    def range_measure(self, axes: Vector) -> None:
-        x, y, z = axes
-        if x:
-            self.resources[0].write(f"1 nrm")
-        if y:
-            self.resources[0].write(f"2 nrm")
-        if z:
-            self.resources[0].write(f"3 nrm")
+    def range_measure(self, axes: VectorMask) -> None:
+        if axes.x:
+            self._write("1 nrm")
+        if axes.y:
+            self._write("2 nrm")
+        if axes.z:
+            self._write("3 nrm")
 
     def enable_joystick(self, value: bool) -> None:
         self.resources[0].write(f"{value:d} joystick")
+
+    def _write(self, message: str) -> int:
+        return self.resources[0].write(message)
+
+    def _query(self, message: str) -> str:
+        return self.resources[0].query(message).strip()
