@@ -7,7 +7,7 @@ __all__ = ["Hydra2xPlugin"]
 class Hydra2xPlugin:
 
     def install(self, window) -> None:
-        window.register_appliance("Hydra 2x", {"driver": Hydra2xDriver, "resources": 2})
+        window.register_connection("Hydra 2x", Hydra2xDriver, 2)
 
     def uninstall(self, window) -> None:
         ...

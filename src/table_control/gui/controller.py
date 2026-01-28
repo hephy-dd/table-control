@@ -11,7 +11,7 @@ from typing import Any, Callable, Iterator, Sequence, TypedDict
 from PySide6 import QtCore
 
 from ..core.driver import Driver, Vector, VectorMask
-from ..core.resource import create_resource
+from ..core.resource import ResourceConfig, Resource
 
 logger = logging.getLogger(__name__)
 
@@ -114,10 +114,10 @@ def poll_interval(steps: Sequence[float]):
 
 
 @dataclass(slots=True)
-class Appliance:
+class Connection:
     name: str
-    driver: Driver
-    resources: list[dict]
+    driver: type[Driver]
+    resources: list[ResourceConfig]
 
 
 @dataclass(slots=True, frozen=True)
@@ -320,7 +320,7 @@ class TableController(AbstractController):
             z_limit_enabled=False,
             z_limit=0.0,
         )
-        self._appliance: Appliance | None = None
+        self._connection: Connection | None = None
         self._t0 = time.monotonic()
         self._abort_request: threading.Event = threading.Event()
 
@@ -329,22 +329,22 @@ class TableController(AbstractController):
         """Open all resources described by `appliance`, construct its driver,
         and yield (driver, resources). All are closed on exit.
         """
-        appliance = self.appliance()
-        if appliance is None:
+        connection = self._connection
+        if connection is None:
             raise RuntimeError("No appliance set")
 
         with ExitStack() as es:
             self.clear_state()
-            resources = [es.enter_context(create_resource(res)) for res in appliance.resources]
-            driver = appliance.driver(resources)  # type: ignore
+            resources = [es.enter_context(Resource(res)) for res in connection.resources]
+            driver = connection.driver(resources)
             yield TableContext(self, driver)
             self.clear_state()
 
-    def appliance(self) -> Appliance | None:
-        return self._appliance
+    def connection(self) -> Connection | None:
+        return self._connection
 
-    def set_appliance(self, appliance: Appliance) -> None:
-        self._appliance = appliance
+    def set_connection(self, connection: Connection) -> None:
+        self._connection = connection
 
     # Commands
 

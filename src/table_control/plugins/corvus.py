@@ -11,7 +11,7 @@ __all__ = ["CorvusPlugin"]
 class CorvusPlugin:
 
     def install(self, window) -> None:
-        window.register_appliance("Corvus", {"driver": CorvusDriver, "resources": 1})
+        window.register_connection("Corvus", CorvusDriver, 1)
 
     def uninstall(self, window) -> None:
         ...
