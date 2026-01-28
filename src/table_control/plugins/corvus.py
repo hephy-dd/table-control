@@ -3,7 +3,7 @@ from pyvisa.constants import StatusCode
 from pyvisa.resources import MessageBasedResource
 
 from table_control.core.driver import Driver, Vector, VectorMask
-from table_control.core.resource  import Resource
+from table_control.core.resource import Resource
 
 __all__ = ["CorvusPlugin"]
 
@@ -17,26 +17,11 @@ class CorvusPlugin:
         ...
 
 
-def drain(resource: MessageBasedResource, max_reads: int = 100) -> None:
-    """Helper to drain junk bytes from serial buffers."""
-    timeout = resource.timeout
-    resource.timeout = 200
-    try:
-        for _ in range(max_reads):
-            try:
-                _ = resource.read()
-            except VisaIOError as exc:
-                if exc.error_code == StatusCode.error_timeout:
-                    break
-                raise
-    finally:
-        resource.timeout = timeout
-
-
 def identity(resource: Resource) -> str:
     return " ".join([
         resource.query("identify").strip(),
         resource.query("version").strip(),
+        resource.query("getserialno").strip(),
     ])
 
 
@@ -50,8 +35,8 @@ class CorvusDriver(Driver):
         return [identity(res) for res in self.resources]
 
     def configure(self) -> None:
-        self._write("0 mode")  # host mode
-        drain(self.resources[0].resource)  # HACK drain serial buffer
+        self._write("0 mode")  # host mode, writes control bytes to buffer
+        self._query("version")  # drain control bytes from buffer
 
     def abort(self) -> None:
         self._write(chr(0x03))  # Ctrl+C

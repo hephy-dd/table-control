@@ -40,45 +40,6 @@ class DummyDriver(Driver):
     def calibration_state(self) -> Vector:
         return Vector(3, 3, 3)  # TODO
 
-    def _clamp_step(self, start: float, target: float, vel: float, dt: float) -> float:
-        """Compute new coordinate along one axis, moving from start toward target
-        at speed vel (units/sec) over elapsed time dt, without overshooting.
-        """
-        # No motion needed or zero speed?
-        if vel == 0.0 or start == target:
-            return target
-
-        # direction: +1 or -1
-        direction = 1 if target > start else -1
-        # candidate new position
-        stepped = start + direction * vel * dt
-        # clamp between start and target
-        if direction > 0:
-            return min(stepped, target)
-        else:
-            return max(stepped, target)
-
-    def _update_motion(self) -> None:
-        """Recompute pos and moving based on elapsed monotonic time."""
-        if not self._moving:
-            return
-
-        now = time.monotonic()
-        dt = now - self._t_start
-
-        # Compute each axis’s new position
-        new_pos: list[float] = [
-            self._clamp_step(s, tgt, v, dt)
-            for s, tgt, v in zip(self._start_pos, self._target_pos, self._vel)
-        ]
-
-        # If every axis has reached its target, stop; else keep moving
-        if new_pos == self._target_pos:
-            self._pos = new_pos
-            self._moving = False
-        else:
-            self._pos = new_pos
-
     def position(self) -> Vector:
         self._update_motion()
         x, y, z = self._pos
@@ -122,3 +83,42 @@ class DummyDriver(Driver):
 
     def enable_joystick(self, value: bool) -> None:
         ...
+
+    def _clamp_step(self, start: float, target: float, vel: float, dt: float) -> float:
+        """Compute new coordinate along one axis, moving from start toward target
+        at speed vel (units/sec) over elapsed time dt, without overshooting.
+        """
+        # No motion needed or zero speed?
+        if vel == 0.0 or start == target:
+            return target
+
+        # direction: +1 or -1
+        direction = 1 if target > start else -1
+        # candidate new position
+        stepped = start + direction * vel * dt
+        # clamp between start and target
+        if direction > 0:
+            return min(stepped, target)
+        else:
+            return max(stepped, target)
+
+    def _update_motion(self) -> None:
+        """Recompute pos and moving based on elapsed monotonic time."""
+        if not self._moving:
+            return
+
+        now = time.monotonic()
+        dt = now - self._t_start
+
+        # Compute each axis’s new position
+        new_pos: list[float] = [
+            self._clamp_step(s, tgt, v, dt)
+            for s, tgt, v in zip(self._start_pos, self._target_pos, self._vel)
+        ]
+
+        # If every axis has reached its target, stop; else keep moving
+        if new_pos == self._target_pos:
+            self._pos = new_pos
+            self._moving = False
+        else:
+            self._pos = new_pos

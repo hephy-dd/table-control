@@ -1,4 +1,5 @@
 from table_control.core.driver import Driver, Vector, VectorMask
+from table_control.core.resource  import Resource
 
 __all__ = ["Hydra2xPlugin"]
 
@@ -12,11 +13,11 @@ class Hydra2xPlugin:
         ...
 
 
-def identity(resource) -> str:
+def identity(resource: Resource) -> str:
     return " ".join([
-        resource.query("identify"),
-        resource.query("version"),
-        resource.query("getserialno"),
+        resource.query("identify").strip(),
+        resource.query("version").strip(),
+        resource.query("getserialno").strip(),
     ])
 
 
