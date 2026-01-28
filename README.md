@@ -18,13 +18,13 @@ Make sure to enable and configure the SCPI socket in the application preferences
 |--------|------------|--------|
 |`*IDN?` | application identity | `*IDN?` -> `table-control v0.1.0` |
 |`*CLS` | clears error stack | `*CLS` |
-|`[:]POSition?` | get position | `POS?` -> `0.000,0.000,0.000` |
+|`[:]POSition?` | get position | `POS?` -> `0.000000,0.000000,0.000000` |
 |`[:]CALibration[:STATe]?` | get calibration | `CAL?` -> `3,3,3` (`1`=cal, `2`=rm, `3`=cal+rm) |
 |`[:]MOVE[:STATe]?` | is moving? | `MOVE?` -> `1` |
 |`[:]MOVE:RELative <POS>` | 3-axis relative move | `MOVE:REL 0,0,4.200` |
 |`[:]MOVE:ABSolute <POS>` | 3-axis absolute move | `MOVE:ABS 10.000,20.000,2.000` |
 |`[:]MOVE:ABORT` | abort a movement | `MOVE:ABORT` |
-|`[:]ZLIMit[:VALue]?` | get Z limit value | `ZLIM?` -> `2.000` |
+|`[:]ZLIMit[:VALue]?` | get Z limit value | `ZLIM?` -> `2.000000` |
 |`[:]ZLIMit:ENABle?` | is Z limit enabled? | `ZLIM:ENAB?` -> `1` |
 |`[:]SYStem:ERRor[:NEXT]?` | next error on stack | `SYS:ERR?` -> `0,"no error"` |
 |`[:]SYStem:ERRor:COUNt?` | size of error stack | `SYS:ERR:COUN?` -> `0` |
@@ -33,12 +33,12 @@ Make sure to enable and configure the SCPI socket in the application preferences
 
 ## Legacy TCP Socket
 
-The application can emulate a legacy TCP commands set previously used with LabView at MBI/HEPHY.
+The application can emulate TCP commands for Corvus Controller GUI v3.0.2 used at MBI/HEPHY.
 Make sure to enable and configure the TCP socket in the application preferences.
 
 |Command |Description |Example |
 |--------|------------|--------|
-|`PO?` | get position and status | `PO?` -> `0.000000,0.000000,0.000000,0` |
+|`PO?` | get position and status (moving) | `PO?` -> `0.000000,0.000000,0.000000,0` |
 |`MR=<DELTA>,<AXIS>` | 1-axis relative move (x=1, y=2, z=3) | `MR=4.200,1` |
 |`MA=<X>,<Y>,<Z>` | 3-axis absolute move | `MA=10.000,20.000,2.000` |
 |`???` | prints help | |

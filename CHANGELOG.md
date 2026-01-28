@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-01-27
+
+### Added
+
+- Restore-to-defaults buttons for preference input forms (#16).
+- Support for ASRL/COM resources (#21).
+- Tests for the `core.utils` module.
+
+### Changed
+
+- Increased the precision of position values to 6 decimal places in the UI and SCPI responses (#19).
+- Changed the legacy SCPI default port to 6345 (#18).
+
+### Fixed
+
+- Legacy SCPI now returns the axis moving state correctly in `PO?` (#17).
+- Legacy SCPI now terminates messages with `\r\n` (#20).
+- Clear the Corvus buffer after setting `0 mode` (#23).
+- Added missing modules and libraries to the PyInstaller Windows executable.
+
 ## [0.6.0] - 2025-11-25
 
 ### Changed
@@ -73,7 +93,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for Hydra controller.
 - Support for Corvus controller.
 
-[unreleased]: https://github.com/hephy-dd/table-control/compare/v0.6.0...HEAD
+[unreleased]: https://github.com/hephy-dd/table-control/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/hephy-dd/table-control/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/hephy-dd/table-control/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/hephy-dd/table-control/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/hephy-dd/table-control/compare/v0.3.0...v0.4.0

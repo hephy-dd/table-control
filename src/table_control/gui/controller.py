@@ -10,8 +10,8 @@ from typing import Any, Callable, Iterator, Sequence, TypedDict
 
 from PySide6 import QtCore
 
-from ..core.driver import Driver, Vector
-from ..core.resource import create_resource
+from ..core.driver import Driver, Vector, VectorMask
+from ..core.resource import ResourceConfig, Resource
 
 logger = logging.getLogger(__name__)
 
@@ -89,6 +89,7 @@ class AbstractController(QtCore.QObject):
                     self.event_pump(command)
             except Exception as exc:
                 logger.exception(exc)
+                self.disconnected.emit()
 
     def event_pump(self, command: Command) -> None:
         time.sleep(0.01)
@@ -113,10 +114,10 @@ def poll_interval(steps: Sequence[float]):
 
 
 @dataclass(slots=True)
-class Appliance:
+class Connection:
     name: str
-    driver: Driver
-    resources: list[dict]
+    driver: type[Driver]
+    resources: list[ResourceConfig]
 
 
 @dataclass(slots=True, frozen=True)
@@ -187,30 +188,30 @@ class MoveAbsoluteCommand(Command):
 
 @dataclass(slots=True, frozen=True)
 class CalibrateCommand(Command):
-    x: int
-    y: int
-    z: int
+    x: bool
+    y: bool
+    z: bool
 
     def __call__(self, context) -> None:
         context.set_moving(True)
         try:
             logger.info("calibrate: x=%d y=%d z=%d", self.x, self.y, self.z)
-            context.perform_motion(lambda driver: driver.calibrate(Vector(self.x, self.y, self.z)))
+            context.perform_motion(lambda driver: driver.calibrate(VectorMask(self.x, self.y, self.z)))
         finally:
             context.set_moving(False)
 
 
 @dataclass(slots=True, frozen=True)
 class RangeMeasureCommand(Command):
-    x: int
-    y: int
-    z: int
+    x: bool
+    y: bool
+    z: bool
 
     def __call__(self, context) -> None:
         context.set_moving(True)
         try:
             logger.info("range measure: x=%d y=%d z=%d", self.x, self.y, self.z)
-            context.perform_motion(lambda driver: driver.range_measure(Vector(self.x, self.y, self.z)))
+            context.perform_motion(lambda driver: driver.range_measure(VectorMask(self.x, self.y, self.z)))
         finally:
             context.set_moving(False)
 
@@ -319,7 +320,7 @@ class TableController(AbstractController):
             z_limit_enabled=False,
             z_limit=0.0,
         )
-        self._appliance: Appliance | None = None
+        self._connection: Connection | None = None
         self._t0 = time.monotonic()
         self._abort_request: threading.Event = threading.Event()
 
@@ -328,22 +329,22 @@ class TableController(AbstractController):
         """Open all resources described by `appliance`, construct its driver,
         and yield (driver, resources). All are closed on exit.
         """
-        appliance = self.appliance()
-        if appliance is None:
+        connection = self._connection
+        if connection is None:
             raise RuntimeError("No appliance set")
 
         with ExitStack() as es:
             self.clear_state()
-            resources = [es.enter_context(create_resource(res)) for res in appliance.resources]
-            driver = appliance.driver(resources)  # type: ignore
+            resources = [es.enter_context(Resource(res)) for res in connection.resources]
+            driver = connection.driver(resources)
             yield TableContext(self, driver)
             self.clear_state()
 
-    def appliance(self) -> Appliance | None:
-        return self._appliance
+    def connection(self) -> Connection | None:
+        return self._connection
 
-    def set_appliance(self, appliance: Appliance) -> None:
-        self._appliance = appliance
+    def set_connection(self, connection: Connection) -> None:
+        self._connection = connection
 
     # Commands
 
@@ -365,17 +366,17 @@ class TableController(AbstractController):
     def request_calibration_state(self) -> None:
         self.put_command(QueryCalibrationCommand())
 
-    def move_relative(self, x, y, z):
+    def move_relative(self, x: float, y: float, z: float) -> None:
         self.put_command(MoveRelativeCommand(x, y, z))
 
-    def move_absolute(self, x, y, z):
+    def move_absolute(self, x: float, y: float, z: float) -> None:
         z_limit = self._state.z_limit if self._state.z_limit_enabled else None
         self.put_command(MoveAbsoluteCommand(x, y, z, z_limit))
 
-    def calibrate(self, x, y, z):
+    def calibrate(self, x: bool, y: bool, z: bool) -> None:
         self.put_command(CalibrateCommand(x, y, z))
 
-    def range_measure(self, x, y, z):
+    def range_measure(self, x: bool, y: bool, z: bool) -> None:
         self.put_command(RangeMeasureCommand(x, y, z))
 
     def set_update_interval(self, interval: float) -> None:
@@ -439,7 +440,7 @@ class TableController(AbstractController):
         self.info_changed.emit(format(info))
 
     def on_disconnected(self, context) -> None:
-        logger.info("Disonnected")
+        logger.info("Disconnected")
 
     def on_exception(self, context, exc) -> bool:
         if isinstance(exc, AbortRequest):
@@ -449,7 +450,7 @@ class TableController(AbstractController):
             self.movement_finished.emit()
             return True
         elif isinstance(exc, CalibrationError):
-            logger.info(str(exc))
+            logger.error(str(exc))
             return True
         return False
 
@@ -483,5 +484,7 @@ class TableController(AbstractController):
                     if not self.on_exception(context, exc):
                         raise
         finally:
-            self.disconnected.emit()
-            self.on_disconnected(context)
+            try:
+                self.on_disconnected(context)
+            finally:
+                self.disconnected.emit()

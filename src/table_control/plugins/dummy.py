@@ -1,6 +1,6 @@
 import time
 
-from table_control.core.driver import Driver, Vector
+from table_control.core.driver import Driver, Vector, VectorMask
 
 __all__ = ["DummyPlugin"]
 
@@ -8,7 +8,7 @@ __all__ = ["DummyPlugin"]
 class DummyPlugin:
 
     def install(self, window) -> None:
-        window.register_appliance("Dummy", {"driver": DummyDriver})
+        window.register_connection("Dummy", DummyDriver, 1)
 
     def uninstall(self, window) -> None:
         ...
@@ -39,6 +39,50 @@ class DummyDriver(Driver):
 
     def calibration_state(self) -> Vector:
         return Vector(3, 3, 3)  # TODO
+
+    def position(self) -> Vector:
+        self._update_motion()
+        x, y, z = self._pos
+        return Vector(x, y, z)
+
+    def is_moving(self) -> bool:
+        self._update_motion()
+        return self._moving
+
+    def move_relative(self, delta: Vector) -> None:
+        """Begin a relative move at the velocities in self._vel."""
+        self._update_motion()
+        # snapshot start
+        self._start_pos = self._pos.copy()
+        # compute target using attributes, not indexing
+        self._target_pos = [
+            self._start_pos[0] + delta.x,
+            self._start_pos[1] + delta.y,
+            self._start_pos[2] + delta.z,
+        ]
+        self._t_start = time.monotonic()
+        self._moving  = True
+
+    def move_absolute(self, position: Vector) -> None:
+        """Begin an absolute move at the velocities in self._vel."""
+        self._update_motion()
+        self._start_pos = self._pos.copy()
+        self._target_pos = [
+            position.x,
+            position.y,
+            position.z,
+        ]
+        self._t_start = time.monotonic()
+        self._moving  = True
+
+    def calibrate(self, axes: VectorMask) -> None:
+        ...
+
+    def range_measure(self, axes: VectorMask) -> None:
+        ...
+
+    def enable_joystick(self, value: bool) -> None:
+        ...
 
     def _clamp_step(self, start: float, target: float, vel: float, dt: float) -> float:
         """Compute new coordinate along one axis, moving from start toward target
@@ -78,47 +122,3 @@ class DummyDriver(Driver):
             self._moving = False
         else:
             self._pos = new_pos
-
-    def position(self) -> Vector:
-        self._update_motion()
-        x, y, z = self._pos
-        return Vector(x, y, z)
-
-    def is_moving(self) -> bool:
-        self._update_motion()
-        return self._moving
-
-    def move_relative(self, delta: Vector) -> None:
-        """Begin a relative move at the velocities in self._vel."""
-        self._update_motion()
-        # snapshot start
-        self._start_pos = self._pos.copy()
-        # compute target using attributes, not indexing
-        self._target_pos = [
-            self._start_pos[0] + delta.x,
-            self._start_pos[1] + delta.y,
-            self._start_pos[2] + delta.z,
-        ]
-        self._t_start = time.monotonic()
-        self._moving  = True
-
-    def move_absolute(self, position: Vector) -> None:
-        """Begin an absolute move at the velocities in self._vel."""
-        self._update_motion()
-        self._start_pos = self._pos.copy()
-        self._target_pos = [
-            position.x,
-            position.y,
-            position.z,
-        ]
-        self._t_start = time.monotonic()
-        self._moving  = True
-
-    def calibrate(self, axes: Vector) -> None:
-        x, y, z = axes  # no-op for now
-
-    def range_measure(self, axes: Vector) -> None:
-        x, y, z = axes  # no-op for now
-
-    def enable_joystick(self, value: bool) -> None:
-        ...
