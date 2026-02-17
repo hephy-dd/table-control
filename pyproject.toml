@@ -1,6 +1,6 @@
 [project]
 name = "table-control"
-version = "0.8.1"
+version = "0.9.0"
 authors = [
     {name = "Bernhard Arnold", email = "bernhard.arnold@oeaw.ac.at"}
 ]
@@ -21,16 +21,16 @@ classifiers = [
     "Operating System :: OS Independent",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
     "Topic :: Scientific/Engineering",
     "Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator",
     "Topic :: System :: Hardware",
 ]
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
-    "PySide6==6.9.1",
-    "PyVISA==1.14.1",
-    "PyVISA-py==0.7.2",
+    "PySide6~=6.10.2",
+    "PyVISA~=1.16.1",
+    "PyVISA-py~=0.8.1",
 ]
 
 [project.urls]
