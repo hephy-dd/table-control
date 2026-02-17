@@ -1,4 +1,4 @@
-from PySide6 import QtCore, QtGui, QtWidgets
+from PySide6 import QtCore, QtWidgets
 
 from .positions import TablePositionsWidget, TablePosition
 from .utils import load_icon, FlashLabel

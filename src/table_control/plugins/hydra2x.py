@@ -51,8 +51,8 @@ class Hydra2xDriver(Driver):
 
     def is_moving(self) -> bool:
         return any([
-            test_state(int(self.resources[0].query(f"st")), 0x1),
-            test_state(int(self.resources[1].query(f"st")), 0x1),
+            test_state(int(self.resources[0].query("st")), 0x1),
+            test_state(int(self.resources[1].query("st")), 0x1),
         ])
 
     def move_relative(self, delta: Vector) -> None:
@@ -67,19 +67,19 @@ class Hydra2xDriver(Driver):
 
     def calibrate(self, axes: VectorMask) -> None:
         if axes.x:
-            self.resources[0].write(f"1 ncal")
+            self.resources[0].write("1 ncal")
         if axes.y:
-            self.resources[0].write(f"2 ncal")
+            self.resources[0].write("2 ncal")
         if axes.z:
-            self.resources[1].write(f"1 ncal")
+            self.resources[1].write("1 ncal")
 
     def range_measure(self, axes: VectorMask) -> None:
         if axes.x:
-            self.resources[0].write(f"1 nrm")
+            self.resources[0].write("1 nrm")
         if axes.y:
-            self.resources[0].write(f"2 nrm")
+            self.resources[0].write("2 nrm")
         if axes.z:
-            self.resources[1].write(f"1 nrm")
+            self.resources[1].write("1 nrm")
 
     def enable_joystick(self, value: bool) -> None:
         states = 0xF if value else 0x0

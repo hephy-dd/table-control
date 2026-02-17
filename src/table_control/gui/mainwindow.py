@@ -1,6 +1,3 @@
-import asyncio
-import logging
-import threading
 import traceback
 import webbrowser
 
