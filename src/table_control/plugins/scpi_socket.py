@@ -55,14 +55,13 @@ class SCPISocketPlugin:
         self.preferences_tab = PreferencesWidget()
         data = self.read_settings(self.settings)
         self.preferences_tab.from_dict(data)
-        dialog.tab_widget.addTab(self.preferences_tab, "SCPI")
+        dialog.add_tab(self.preferences_tab, "SCPI")
 
     def after_preferences(self, dialog: PreferencesDialog) -> None:
         if dialog.result() == dialog.DialogCode.Accepted:
             self.write_settings(self.settings, self.preferences_tab.to_dict())
             self.restart_server()
-        index = dialog.tab_widget.indexOf(self.preferences_tab)
-        dialog.tab_widget.removeTab(index)
+        dialog.remove_tab(self.preferences_tab)
 
     def restart_server(self) -> None:
         data = self.read_settings(QtCore.QSettings())

@@ -45,14 +45,13 @@ class LegacySocketPlugin:
         self.preferences_tab = PreferencesWidget()
         data = self.read_settings(self.settings)
         self.preferences_tab.from_dict(data)
-        dialog.tab_widget.addTab(self.preferences_tab, "Legacy TCP")
+        dialog.add_tab(self.preferences_tab, "Legacy TCP")
 
     def after_preferences(self, dialog: PreferencesDialog) -> None:
         if dialog.result() == dialog.DialogCode.Accepted:
             self.write_settings(self.settings, self.preferences_tab.to_dict())
             self.restartServer()
-        index = dialog.tab_widget.indexOf(self.preferences_tab)
-        dialog.tab_widget.removeTab(index)
+        dialog.remove_tab(self.preferences_tab)
 
     def restartServer(self) -> None:
         data = self.read_settings(QtCore.QSettings())
