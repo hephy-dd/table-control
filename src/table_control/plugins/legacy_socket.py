@@ -14,12 +14,10 @@ import select
 import socket
 import threading
 import time
-import re
 from typing import Final
 
 from PySide6 import QtCore, QtWidgets
 
-from table_control.gui import APP_TITLE, APP_VERSION
 from table_control.gui.preferences import PreferencesDialog
 
 logger = logging.getLogger(__name__)

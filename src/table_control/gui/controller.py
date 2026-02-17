@@ -3,10 +3,9 @@ import threading
 import time
 import queue
 import logging
-import random
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
-from typing import Any, Callable, Iterator, Sequence, TypedDict
+from typing import Callable, Iterator, Sequence
 
 from PySide6 import QtCore
 

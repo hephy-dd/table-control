@@ -1,7 +1,5 @@
 from PySide6 import QtCore, QtWidgets
 
-from .utils import load_icon
-
 
 def safe_float(text: str) -> float:
     try:

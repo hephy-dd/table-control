@@ -1,7 +1,3 @@
-from pyvisa.errors import VisaIOError
-from pyvisa.constants import StatusCode
-from pyvisa.resources import MessageBasedResource
-
 from table_control.core.driver import Driver, Vector, VectorMask
 from table_control.core.resource import Resource
 
