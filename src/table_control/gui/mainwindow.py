@@ -31,7 +31,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.quit_action = QtGui.QAction(self)
         self.quit_action.setText("&Quit")
-        self.quit_action.setShortcut(QtGui.QKeySequence.Quit)
+        self.quit_action.setShortcut(QtGui.QKeySequence.StandardKey.Quit)
         self.quit_action.setStatusTip("Quit the application")
         self.quit_action.triggered.connect(self.close)
 
@@ -74,8 +74,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.joystick_action.toggled.connect(self.request_enable_joystick)
 
         self.contents_action = QtGui.QAction(self)
-        self.contents_action.setShortcut("F1")
         self.contents_action.setText("&Contents")
+        self.contents_action.setShortcut(QtGui.QKeySequence.StandardKey.HelpContents)
         self.contents_action.setStatusTip("Open help documentation in your browser")
         self.contents_action.triggered.connect(self.show_contents)
 
