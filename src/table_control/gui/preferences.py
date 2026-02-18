@@ -11,6 +11,8 @@ class PreferencesDialog(QtWidgets.QDialog):
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
 
+        self.setWindowTitle("Preferences")
+
         self.tab_widget = QtWidgets.QTabWidget(self)
 
         self.button_box = QtWidgets.QDialogButtonBox(self)

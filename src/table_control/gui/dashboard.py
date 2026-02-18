@@ -44,6 +44,8 @@ class DashboardWidget(QtWidgets.QWidget):
         self.z_pos_spin_box.setRange(-10000, 10000)
         self.z_pos_spin_box.setSuffix(" mm")
 
+        self.copy_position_button = QtWidgets.QToolButton(self)
+
         self.pos_flash_label = FlashLabel(flash_duration_ms=250)
 
         self.x_calibration_line_edit = QtWidgets.QLineEdit(self)
@@ -217,12 +219,14 @@ class DashboardWidget(QtWidgets.QWidget):
         position_layout.addWidget(self.x_pos_spin_box, 1, 0)
         position_layout.addWidget(self.y_pos_spin_box, 1, 1)
         position_layout.addWidget(self.z_pos_spin_box, 1, 2)
-        position_layout.addWidget(self.pos_flash_label, 1, 3)
+        position_layout.addWidget(self.copy_position_button, 1, 3)
+        position_layout.addWidget(self.pos_flash_label, 1, 4)
         position_layout.setColumnStretch(0, 1)
         position_layout.setColumnStretch(1, 1)
         position_layout.setColumnStretch(2, 1)
         position_layout.setColumnStretch(3, 1)
         position_layout.setColumnStretch(4, 1)
+        position_layout.setColumnStretch(5, 1)
 
         x_calibration_layout = QtWidgets.QHBoxLayout()
         x_calibration_layout.addWidget(self.x_cal_button)
@@ -375,6 +379,12 @@ class DashboardWidget(QtWidgets.QWidget):
         self.y_pos_spin_box.setValue(y)
         self.z_pos_spin_box.setValue(z)
         self.pos_flash_label.flash()
+
+    def table_position(self) -> tuple[float, float, float]:
+        x = self.x_pos_spin_box.value()
+        y = self.y_pos_spin_box.value()
+        z = self.z_pos_spin_box.value()
+        return x, y, z
 
     def set_table_calibration(self, x, y, z) -> None:
         x, y, z = map(decode_calibration, [x, y, z])
