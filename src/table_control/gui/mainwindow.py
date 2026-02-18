@@ -1,3 +1,4 @@
+import logging
 import traceback
 import webbrowser
 
@@ -30,52 +31,70 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.quit_action = QtGui.QAction(self)
         self.quit_action.setText("&Quit")
-        self.quit_action.setShortcut("Ctrl+Q")
+        self.quit_action.setShortcut(QtGui.QKeySequence.Quit)
+        self.quit_action.setStatusTip("Quit the application")
         self.quit_action.triggered.connect(self.close)
 
+        self.copy_position_action = QtGui.QAction(self)
+        self.copy_position_action.setText("&Copy Position")
+        self.copy_position_action.setIcon(load_icon("copy.svg"))
+        self.copy_position_action.setShortcut("Ctrl+Shift+C")
+        self.copy_position_action.setStatusTip("Copy current position to clipboard")
+        self.copy_position_action.triggered.connect(self.copy_position)
+
         self.preferences_action = QtGui.QAction(self)
-        self.preferences_action.setText("&Preferences")
+        self.preferences_action.setText("&Preferences...")
+        self.preferences_action.setStatusTip("Show preferences dialog")
         self.preferences_action.triggered.connect(self.show_preferences)
 
         self.connect_action = QtGui.QAction(self)
         self.connect_action.setText("&Connect")
         self.connect_action.setIcon(load_icon("connect.svg"))
+        self.connect_action.setStatusTip("Open connection dialog")
         self.connect_action.triggered.connect(self.connect_table)
 
         self.disconnect_action = QtGui.QAction(self)
         self.disconnect_action.setText("&Disconnect")
         self.disconnect_action.setIcon(load_icon("disconnect.svg"))
+        self.disconnect_action.setStatusTip("Close open connections")
         self.disconnect_action.triggered.connect(self.disconnect_table)
 
         self.stop_action = QtGui.QAction(self)
         self.stop_action.setText("&Stop")
         self.stop_action.setIcon(load_icon("stop.svg"))
         self.stop_action.setShortcut("Ctrl+P")
+        self.stop_action.setStatusTip("Stop current movements")
         self.stop_action.triggered.connect(self.abort)
 
         self.joystick_action = QtGui.QAction(self)
-        self.joystick_action.setCheckable(True)
         self.joystick_action.setText("&Joystick")
         self.joystick_action.setIcon(load_icon("joystick.svg"))
+        self.joystick_action.setStatusTip("Toggle external joystick control")
+        self.joystick_action.setCheckable(True)
         self.joystick_action.toggled.connect(self.request_enable_joystick)
 
         self.contents_action = QtGui.QAction(self)
         self.contents_action.setShortcut("F1")
         self.contents_action.setText("&Contents")
+        self.contents_action.setStatusTip("Open help documentation in your browser")
         self.contents_action.triggered.connect(self.show_contents)
 
         self.about_qt_action = QtGui.QAction(self)
         self.about_qt_action.setText("About &Qt")
+        self.about_qt_action.setStatusTip("Show the Qt version and licensing information")
         self.about_qt_action.triggered.connect(self.show_about_qt)
 
         self.about_action = QtGui.QAction(self)
         self.about_action.setText("&About")
+        self.about_action.setStatusTip("About this application")
         self.about_action.triggered.connect(self.show_about)
 
         self.file_menu = self.menuBar().addMenu("&File")
         self.file_menu.addAction(self.quit_action)
 
         self.edit_menu = self.menuBar().addMenu("&Edit")
+        self.edit_menu.addAction(self.copy_position_action)
+        self.edit_menu.addSeparator()
         self.edit_menu.addAction(self.preferences_action)
 
         self.view_menu = self.menuBar().addMenu("&View")
@@ -114,6 +133,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dashboard.update_interval_changed.connect(self.table_controller.set_update_interval)
         self.dashboard.z_limit_enabled_changed.connect(self.table_controller.set_z_limit_enabled)
         self.dashboard.z_limit_changed.connect(self.table_controller.set_z_limit)
+        self.dashboard.copy_position_button.setDefaultAction(self.copy_position_action)
         self.table_controller.info_changed.connect(self.dashboard.set_controller)
         self.table_controller.position_changed.connect(self.dashboard.set_table_position)
         self.table_controller.calibration_changed.connect(self.dashboard.set_table_calibration)
@@ -227,6 +247,14 @@ class MainWindow(QtWidgets.QMainWindow):
         self.table_controller.set_z_limit(self.dashboard.z_limit())
 
     @QtCore.Slot()
+    def copy_position(self) -> None:
+        """Copy current displayed position to clipboard."""
+        x, y, z = self.dashboard.table_position()
+        position_text = f"{x:.6f},{y:.6f},{z:.6f}"
+        QtGui.QGuiApplication.clipboard().setText(position_text)
+        logging.info("Copied current position to clipboard: %s", position_text)
+
+    @QtCore.Slot()
     def show_preferences(self) -> None:
         dialog = PreferencesDialog(self)
         dialog.read_settings(self.settings)
@@ -300,6 +328,8 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot()
     def enter_disconnected(self) -> None:
         self.plugin_manager.dispatch("before_enter_disconnected", (self,))
+        self.copy_position_action.setEnabled(False)
+        self.preferences_action.setEnabled(True)
         self.connect_action.setEnabled(True)
         self.disconnect_action.setEnabled(False)
         self.stop_action.setEnabled(False)
@@ -311,6 +341,8 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot()
     def enter_connected(self) -> None:
         self.plugin_manager.dispatch("before_enter_connected", (self,))
+        self.copy_position_action.setEnabled(True)
+        self.preferences_action.setEnabled(True)
         self.connect_action.setEnabled(False)
         self.disconnect_action.setEnabled(True)
         self.stop_action.setEnabled(True)
@@ -323,6 +355,8 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot()
     def enter_moving(self) -> None:
         self.plugin_manager.dispatch("before_enter_moving", (self,))
+        self.copy_position_action.setEnabled(False)
+        self.preferences_action.setEnabled(False)
         self.connect_action.setEnabled(False)
         self.disconnect_action.setEnabled(False)
         self.stop_action.setEnabled(True)
