@@ -1,24 +1,24 @@
 from table_control.core.driver import Driver, Vector, VectorMask
-from table_control.core.resource  import Resource
+from table_control.core.resource import Resource
 
 __all__ = ["Hydra2xPlugin"]
 
 
 class Hydra2xPlugin:
-
-    def install(self, window) -> None:
+    def on_install(self, window) -> None:
         window.register_connection("Hydra 2x", Hydra2xDriver, 2)
 
-    def uninstall(self, window) -> None:
-        ...
+    def on_uninstall(self, window) -> None: ...
 
 
 def identity(resource: Resource) -> str:
-    return " ".join([
-        resource.query("identify").strip(),
-        resource.query("version").strip(),
-        resource.query("getserialno").strip(),
-    ])
+    return " ".join(
+        [
+            resource.query("identify").strip(),
+            resource.query("version").strip(),
+            resource.query("getserialno").strip(),
+        ]
+    )
 
 
 def test_state(state: int, value: int) -> bool:
@@ -26,12 +26,10 @@ def test_state(state: int, value: int) -> bool:
 
 
 class Hydra2xDriver(Driver):
-
     def identify(self) -> list[str]:
         return [identity(res) for res in self.resources]
 
-    def configure(self) -> None:
-        ...
+    def configure(self) -> None: ...
 
     def abort(self) -> None:
         self.resources[0].write(chr(0x03))  # Ctrl+C
@@ -50,10 +48,12 @@ class Hydra2xDriver(Driver):
         return Vector(x, y, z)
 
     def is_moving(self) -> bool:
-        return any([
-            test_state(int(self.resources[0].query("st")), 0x1),
-            test_state(int(self.resources[1].query("st")), 0x1),
-        ])
+        return any(
+            [
+                test_state(int(self.resources[0].query("st")), 0x1),
+                test_state(int(self.resources[1].query("st")), 0x1),
+            ]
+        )
 
     def move_relative(self, delta: Vector) -> None:
         x, y, z = delta

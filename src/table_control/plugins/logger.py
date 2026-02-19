@@ -8,8 +8,7 @@ __all__ = ["LoggerPlugin"]
 
 
 class LoggerPlugin:
-
-    def install(self, window) -> None:
+    def on_install(self, window) -> None:
         self.logger = logging.getLogger()
         self.logging_widget = LoggingWidget()
         self.logging_widget.add_logger(self.logger)
@@ -17,11 +16,17 @@ class LoggerPlugin:
 
         self.logging_dock_widget = QtWidgets.QDockWidget("Logging")
         self.logging_dock_widget.setObjectName("logging_dock_widget")
-        self.logging_dock_widget.setAllowedAreas(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea)
+        self.logging_dock_widget.setAllowedAreas(
+            QtCore.Qt.DockWidgetArea.BottomDockWidgetArea
+        )
         self.logging_dock_widget.setWidget(self.logging_widget)
-        self.logging_dock_widget.setFeatures(QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetClosable)
+        self.logging_dock_widget.setFeatures(
+            QtWidgets.QDockWidget.DockWidgetFeature.DockWidgetClosable
+        )
         self.logging_dock_widget.hide()
-        window.addDockWidget(QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.logging_dock_widget)
+        window.addDockWidget(
+            QtCore.Qt.DockWidgetArea.BottomDockWidgetArea, self.logging_dock_widget
+        )
 
         self.logging_action = self.logging_dock_widget.toggleViewAction()
         self.logging_action.setStatusTip("Toggle logging dock window")
@@ -29,14 +34,13 @@ class LoggerPlugin:
         window.view_menu.menuAction().setVisible(True)  # enable view menu
         window.view_menu.addAction(self.logging_action)
 
-    def uninstall(self, window) -> None:
+    def on_uninstall(self, window) -> None:
         window.view_menu.removeAction(self.logging_action)
         self.logging_widget.remove_logger(self.logger)
         self.logging_widget.shutdown()
 
 
 class Handler(logging.Handler):
-
     def __init__(self, callback: Callable) -> None:
         super().__init__()
         self.callback = callback
@@ -46,7 +50,6 @@ class Handler(logging.Handler):
 
 
 class RecordsQueue:
-
     def __init__(self) -> None:
         self.lock = threading.RLock()
         self.records: List[logging.LogRecord] = []
@@ -63,7 +66,6 @@ class RecordsQueue:
 
 
 class LoggingWidget(QtWidgets.QTextEdit):
-
     MAX_ENTRIES: int = 4096
     """Maximum number of visible log entries."""
 

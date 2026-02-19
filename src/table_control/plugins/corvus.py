@@ -5,11 +5,10 @@ __all__ = ["CorvusPlugin"]
 
 
 class CorvusPlugin:
-
-    def install(self, window) -> None:
+    def on_install(self, window) -> None:
         window.register_connection("Corvus", CorvusDriver, 1)
 
-    def uninstall(self, window) -> None:
+    def on_uninstall(self, window) -> None:
         ...
 
 

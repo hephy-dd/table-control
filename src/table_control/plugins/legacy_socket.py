@@ -27,31 +27,29 @@ DEFAULT_PORT: Final[int] = 6345
 
 
 class LegacySocketPlugin:
-
-    def install(self, window) -> None:
+    def on_install(self, window) -> None:
         self.settings = window.settings
         self.socket_server: SocketServer | None = None
         self.table_controller = window.table_controller
-        self.restartServer()
+        self.restart_server()
 
-    def uninstall(self, window) -> None:
+    def on_uninstall(self, window) -> None:
         if self.socket_server:
             self.socket_server.shutdown(timeout=60.0)
-        logger.info("uninstalled %r", type(self).__name__)
 
-    def before_preferences(self, dialog: PreferencesDialog) -> None:
+    def on_before_preferences(self, dialog: PreferencesDialog) -> None:
         self.preferences_tab = PreferencesWidget()
         data = self.read_settings(self.settings)
         self.preferences_tab.from_dict(data)
         dialog.add_tab(self.preferences_tab, "Legacy TCP")
 
-    def after_preferences(self, dialog: PreferencesDialog) -> None:
+    def on_after_preferences(self, dialog: PreferencesDialog) -> None:
         if dialog.result() == dialog.DialogCode.Accepted:
             self.write_settings(self.settings, self.preferences_tab.to_dict())
-            self.restartServer()
+            self.restart_server()
         dialog.remove_tab(self.preferences_tab)
 
-    def restartServer(self) -> None:
+    def restart_server(self) -> None:
         data = self.read_settings(QtCore.QSettings())
         if self.socket_server:
             logger.info("legacy socket: shutdown server...")
@@ -73,7 +71,6 @@ class LegacySocketPlugin:
 
 
 class PreferencesWidget(QtWidgets.QWidget):
-
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
 
@@ -132,7 +129,6 @@ class PreferencesWidget(QtWidgets.QWidget):
 
 
 class SocketServer:
-
     def __init__(self, table, host, port) -> None:
         self.shutdown_requested = threading.Event()
         self.shutdown_finished = threading.Event()
@@ -154,7 +150,9 @@ class SocketServer:
                     s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
                     s.bind((self.host, self.port))
                     s.listen()
-                    logger.info("legacy socket: listening on: %s:%s", self.host, self.port)
+                    logger.info(
+                        "legacy socket: listening on: %s:%s", self.host, self.port
+                    )
 
                     while True:
                         ready, _, _ = select.select([s], [], [], self.timeout)
@@ -239,12 +237,14 @@ class SocketServer:
         # ???
         if command == "???":
             # Note: Corvus Controller v3.0.2 bug sends "\n\r"
-            return "\n".join([
-                "Command list:",
-                "PO? - Get Table Position and Status",
-                "MA=x.xxx,x.xxx,x.xxx - Move absolute [X,Y,Z]",
-                "MR=x.xxx,x - Move relative [StepWidth,Axis]",
-                "??? - This command",
-            ])
+            return "\n".join(
+                [
+                    "Command list:",
+                    "PO? - Get Table Position and Status",
+                    "MA=x.xxx,x.xxx,x.xxx - Move absolute [X,Y,Z]",
+                    "MR=x.xxx,x - Move relative [StepWidth,Axis]",
+                    "??? - This command",
+                ]
+            )
 
         return response_not_valid

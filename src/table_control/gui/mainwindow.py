@@ -184,17 +184,17 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plugin_manager.register_plugin(plugin)
 
     def install_plugins(self) -> None:
-        self.plugin_manager.dispatch("install", (self,))
+        self.plugin_manager.notify("install", self)
 
     def uninstall_plugins(self) -> None:
-        self.plugin_manager.dispatch("uninstall", (self,))
+        self.plugin_manager.notify("uninstall", self)
 
     def register_connection(self, name: str, driver_cls: type[Driver], n_resources: int) -> None:
         self.connection_configs.update({name: ConnectionConfig(name, driver_cls, n_resources)})
 
     def read_settings(self) -> None:
         settings = self.settings
-        self.plugin_manager.dispatch("before_read_settings", (settings,))
+        self.plugin_manager.notify("before_read_settings", settings)
         settings.beginGroup("mainwindow")
 
         geometry: QtCore.QByteArray = settings.value("geometry", QtCore.QByteArray(), QtCore.QByteArray)  # type: ignore
@@ -222,11 +222,11 @@ class MainWindow(QtWidgets.QMainWindow):
         settings.endArray()
 
         settings.endGroup()
-        self.plugin_manager.dispatch("after_read_settings", (settings,))
+        self.plugin_manager.notify("after_read_settings", settings)
 
     def write_settings(self) -> None:
         settings = self.settings
-        self.plugin_manager.dispatch("before_write_settings", (settings,))
+        self.plugin_manager.notify("before_write_settings", settings)
         settings.beginGroup("mainwindow")
 
         settings.setValue("geometry", self.saveGeometry())
@@ -248,7 +248,7 @@ class MainWindow(QtWidgets.QMainWindow):
         settings.endArray()
 
         settings.endGroup()
-        self.plugin_manager.dispatch("after_write_settings", (settings,))
+        self.plugin_manager.notify("after_write_settings", settings)
 
     def sync_controller(self) -> None:
         self.table_controller.update_interval = self.dashboard.update_interval()
@@ -272,9 +272,9 @@ class MainWindow(QtWidgets.QMainWindow):
     def show_preferences(self) -> None:
         dialog = PreferencesDialog(self)
         dialog.read_settings(self.settings)
-        self.plugin_manager.dispatch("before_preferences", (dialog,))
+        self.plugin_manager.notify("before_preferences", dialog)
         dialog.exec()
-        self.plugin_manager.dispatch("after_preferences", (dialog,))
+        self.plugin_manager.notify("after_preferences", dialog)
         dialog.write_settings(self.settings)
 
     @QtCore.Slot()
@@ -341,7 +341,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.Slot()
     def enter_disconnected(self) -> None:
-        self.plugin_manager.dispatch("before_enter_disconnected", (self,))
+        self.plugin_manager.notify("before_enter_disconnected", self)
         self.add_position_action.setEnabled(False)
         self.copy_position_action.setEnabled(False)
         self.preferences_action.setEnabled(True)
@@ -351,11 +351,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.joystick_action.setEnabled(False)
         self.dashboard.enter_disconnected()
         self.progress_bar.hide()
-        self.plugin_manager.dispatch("after_enter_disconnected", (self,))
+        self.plugin_manager.notify("after_enter_disconnected", self)
 
     @QtCore.Slot()
     def enter_connected(self) -> None:
-        self.plugin_manager.dispatch("before_enter_connected", (self,))
+        self.plugin_manager.notify("before_enter_connected", self)
         self.add_position_action.setEnabled(True)
         self.copy_position_action.setEnabled(True)
         self.preferences_action.setEnabled(True)
@@ -366,11 +366,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.joystick_action.setEnabled(True)
         self.dashboard.enter_connected()
         self.progress_bar.hide()
-        self.plugin_manager.dispatch("after_enter_connected", (self,))
+        self.plugin_manager.notify("after_enter_connected", self)
 
     @QtCore.Slot()
     def enter_moving(self) -> None:
-        self.plugin_manager.dispatch("before_enter_moving", (self,))
+        self.plugin_manager.notify("before_enter_moving", self)
         self.add_position_action.setEnabled(False)
         self.copy_position_action.setEnabled(False)
         self.preferences_action.setEnabled(False)
@@ -380,7 +380,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.joystick_action.setEnabled(False)
         self.dashboard.enter_moving()
         self.progress_bar.show()
-        self.plugin_manager.dispatch("after_enter_moving", (self,))
+        self.plugin_manager.notify("after_enter_moving", self)
 
     @QtCore.Slot(QtGui.QCloseEvent)
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
