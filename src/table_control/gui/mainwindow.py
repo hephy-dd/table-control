@@ -266,6 +266,7 @@ class MainWindow(QtWidgets.QMainWindow):
         position_text = f"{x:.6f},{y:.6f},{z:.6f}"
         QtGui.QGuiApplication.clipboard().setText(position_text)
         logging.info("Copied current position to clipboard: %s", position_text)
+        self.statusBar().showMessage(f"Copied {position_text} to clipboard", 3000)
 
     @QtCore.Slot()
     def show_preferences(self) -> None:
