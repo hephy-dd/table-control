@@ -8,7 +8,7 @@ __all__ = ["DummyPlugin"]
 class DummyPlugin:
 
     def install(self, window) -> None:
-        window.register_connection("Dummy", DummyDriver, 1)
+        window.register_connection("Dummy", DummyDriver, 0)
 
     def uninstall(self, window) -> None:
         ...
