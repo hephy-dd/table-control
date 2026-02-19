@@ -44,7 +44,6 @@ def set_position(item, position: TablePosition) -> None:
 class TablePositionsWidget(QtWidgets.QWidget):
 
     move_requested = QtCore.Signal(float, float, float)
-    stop_requested = QtCore.Signal()
 
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)

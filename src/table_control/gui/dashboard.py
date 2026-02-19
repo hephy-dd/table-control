@@ -1,7 +1,7 @@
 from PySide6 import QtCore, QtWidgets
 
 from .positions import TablePositionsWidget, TablePosition
-from .utils import load_icon, FlashLabel
+from .utils import FlashLabel
 
 
 def decode_calibration(value: int) -> str:
@@ -15,7 +15,6 @@ class DashboardWidget(QtWidgets.QWidget):
     absolute_move_requested = QtCore.Signal(float, float, float)
     calibrate_requested = QtCore.Signal(bool, bool, bool)
     range_measure_requested = QtCore.Signal(bool ,bool, bool)
-    stop_requested = QtCore.Signal()
     update_interval_changed = QtCore.Signal(float)
     z_limit_enabled_changed = QtCore.Signal(bool)
     z_limit_changed = QtCore.Signal(float)
@@ -143,10 +142,6 @@ class DashboardWidget(QtWidgets.QWidget):
         self.load_abs_button.setMaximumWidth(48)
         self.load_abs_button.clicked.connect(self.load_abs_pos)
 
-        self.stop_button = QtWidgets.QPushButton("Stop")
-        self.stop_button.setIcon(load_icon("stop.svg"))
-        self.stop_button.clicked.connect(self.stop_requested)
-
         self.x_cal_button = QtWidgets.QPushButton("Cal")
         self.x_cal_button.setMaximumWidth(54)
         self.x_cal_button.clicked.connect(lambda: self.calibrate(True, False, False))
@@ -205,7 +200,6 @@ class DashboardWidget(QtWidgets.QWidget):
 
         self.positions_widget = TablePositionsWidget(self)
         self.positions_widget.move_requested.connect(self.absolute_move)
-        self.positions_widget.stop_requested.connect(self.stop_requested)
 
         self.calibration_widget = QtWidgets.QWidget(self)
 
@@ -288,8 +282,6 @@ class DashboardWidget(QtWidgets.QWidget):
         button_layout.addWidget(self.move_abs_button, 6, 3)
         button_layout.addWidget(self.clear_abs_button, 6, 4)
         button_layout.addWidget(self.load_abs_button, 6, 6)
-
-        button_layout.addWidget(self.stop_button, 7, 3)
 
         calibration_widget_layout = QtWidgets.QGridLayout(self.calibration_widget)
         calibration_widget_layout.addWidget(QtWidgets.QLabel("X"), 0, 0)
