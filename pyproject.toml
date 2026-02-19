@@ -4,7 +4,7 @@ version = "0.9.0"
 authors = [
     {name = "Bernhard Arnold", email = "bernhard.arnold@oeaw.ac.at"}
 ]
-description = "Generic 3-axis table control software."
+description = "Generic 3-axis motion control software."
 readme = "README.md"
 license = {file = "LICENSE"}
 keywords = [

@@ -7,9 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-02-19
+
 ### Added
 
-- Copy current position menu action and button (#35).
+- Copy current position action and tool button (#35).
+- Add current position action and tool button (#36).
 
 ### Changed
 
@@ -78,7 +81,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Refactored table controller logic (#10).
+- Refactored stage controller logic (#10).
 
 ### Fixed
 
@@ -90,7 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Legacy TCP socket plugin for backward compatibility (#2).
 - Joystick toggle action (#3).
-- Dummy controller module to simulate table movements.
+- Dummy controller module to simulate stage movements.
 - Added `CONTRIBUTING.md` file for project contribution guidelines.
 
 ### Changed
@@ -118,7 +121,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for Hydra controller.
 - Support for Corvus controller.
 
-[unreleased]: https://github.com/hephy-dd/table-control/compare/v0.8.1...HEAD
+[unreleased]: https://github.com/hephy-dd/table-control/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/hephy-dd/table-control/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/hephy-dd/table-control/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/hephy-dd/table-control/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/hephy-dd/table-control/compare/v0.6.0...v0.7.0

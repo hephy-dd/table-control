@@ -1,6 +1,6 @@
 # table-control
 
-A generic 3-axis table control software.
+A generic 3-axis motion control software.
 
 Provides a unified interface for supported hardware controllers and exposes both SCPI and legacy TCP command interfaces.
 
@@ -11,12 +11,12 @@ Provides a unified interface for supported hardware controllers and exposes both
 
 ## SCPI Socket
 
-The application can be used as generic proxy for different table controllers.
+The application can be used as generic proxy for different motion controllers.
 Make sure to enable and configure the SCPI socket in the application preferences.
 
 |Command |Description |Example |
 |--------|------------|--------|
-|`*IDN?` | application identity | `*IDN?` -> `table-control v0.1.0` |
+|`*IDN?` | application identity | `*IDN?` -> `table-control v0.9.0` |
 |`*CLS` | clears error stack | `*CLS` |
 |`[:]POSition?` | get position | `POS?` -> `0.000000,0.000000,0.000000` |
 |`[:]CALibration[:STATe]?` | get calibration | `CAL?` -> `3,3,3` (`1`=cal, `2`=rm, `3`=cal+rm) |

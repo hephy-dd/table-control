@@ -35,12 +35,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self.quit_action.setStatusTip("Quit the application")
         self.quit_action.triggered.connect(self.close)
 
+        self.add_position_action = QtGui.QAction(self)
+        self.add_position_action.setText("&Add Position")
+        self.add_position_action.setIcon(load_icon("mark.svg"))
+        self.add_position_action.setShortcut("Ctrl+Shift+A")
+        self.add_position_action.setStatusTip("Add current position to list")
+        self.add_position_action.triggered.connect(self.add_current_position)
+
         self.copy_position_action = QtGui.QAction(self)
         self.copy_position_action.setText("&Copy Position")
         self.copy_position_action.setIcon(load_icon("copy.svg"))
         self.copy_position_action.setShortcut("Ctrl+Shift+C")
         self.copy_position_action.setStatusTip("Copy current position to clipboard")
-        self.copy_position_action.triggered.connect(self.copy_position)
+        self.copy_position_action.triggered.connect(self.copy_current_position)
 
         self.preferences_action = QtGui.QAction(self)
         self.preferences_action.setText("&Preferences...")
@@ -94,6 +101,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.file_menu.addAction(self.quit_action)
 
         self.edit_menu = self.menuBar().addMenu("&Edit")
+        self.edit_menu.addAction(self.add_position_action)
         self.edit_menu.addAction(self.copy_position_action)
         self.edit_menu.addSeparator()
         self.edit_menu.addAction(self.preferences_action)
@@ -133,6 +141,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dashboard.update_interval_changed.connect(self.table_controller.set_update_interval)
         self.dashboard.z_limit_enabled_changed.connect(self.table_controller.set_z_limit_enabled)
         self.dashboard.z_limit_changed.connect(self.table_controller.set_z_limit)
+        self.dashboard.add_position_button.setDefaultAction(self.add_position_action)
         self.dashboard.copy_position_button.setDefaultAction(self.copy_position_action)
         self.table_controller.info_changed.connect(self.dashboard.set_controller)
         self.table_controller.position_changed.connect(self.dashboard.set_table_position)
@@ -247,7 +256,11 @@ class MainWindow(QtWidgets.QMainWindow):
         self.table_controller.set_z_limit(self.dashboard.z_limit())
 
     @QtCore.Slot()
-    def copy_position(self) -> None:
+    def add_current_position(self) -> None:
+        self.dashboard.show_add_position_dialog()
+
+    @QtCore.Slot()
+    def copy_current_position(self) -> None:
         """Copy current displayed position to clipboard."""
         x, y, z = self.dashboard.table_position()
         position_text = f"{x:.6f},{y:.6f},{z:.6f}"
@@ -328,6 +341,7 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot()
     def enter_disconnected(self) -> None:
         self.plugin_manager.dispatch("before_enter_disconnected", (self,))
+        self.add_position_action.setEnabled(False)
         self.copy_position_action.setEnabled(False)
         self.preferences_action.setEnabled(True)
         self.connect_action.setEnabled(True)
@@ -341,6 +355,7 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot()
     def enter_connected(self) -> None:
         self.plugin_manager.dispatch("before_enter_connected", (self,))
+        self.add_position_action.setEnabled(True)
         self.copy_position_action.setEnabled(True)
         self.preferences_action.setEnabled(True)
         self.connect_action.setEnabled(False)
@@ -355,6 +370,7 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot()
     def enter_moving(self) -> None:
         self.plugin_manager.dispatch("before_enter_moving", (self,))
+        self.add_position_action.setEnabled(False)
         self.copy_position_action.setEnabled(False)
         self.preferences_action.setEnabled(False)
         self.connect_action.setEnabled(False)
