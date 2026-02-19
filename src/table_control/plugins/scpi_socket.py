@@ -1,4 +1,4 @@
-"""Generic SCPI interface for 3-axis table control software.
+"""Generic SCPI interface for 3-axis motion control software.
 
 Supported SCPI commands:
 

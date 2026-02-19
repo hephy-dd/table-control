@@ -76,7 +76,7 @@ class AbstractController(QtCore.QObject):
         return not self._shutdown_request.is_set()
 
     def shutdown(self) -> None:
-        logger.info("shutting down table controller...")
+        logger.info("shutting down stage controller...")
         self._shutdown_request.set()
         self._thread.join()
 

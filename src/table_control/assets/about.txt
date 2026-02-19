@@ -1,5 +1,5 @@
 <h1>{title}</h1>
 <p>Version {version}</p>
-<p>Generic 3-axis table control software.</p>
+<p>Generic 3-axis motion control software.</p>
 <p>Copyright &copy; 2024-2026 <a href="https://oeaw.ac.at/mbi">MBI</a>, Marietta Blau Institute for Particle Physics.</p>
 <p>This software is licensed under the GNU General Public License v3.0</p>
