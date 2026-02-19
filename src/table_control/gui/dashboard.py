@@ -13,7 +13,7 @@ class DashboardWidget(QtWidgets.QWidget):
     move_requested = QtCore.Signal()
     relative_move_requested = QtCore.Signal(float, float, float)
     absolute_move_requested = QtCore.Signal(float, float, float)
-    calibrate_requested = QtCore.Signal(bool ,bool, bool)
+    calibrate_requested = QtCore.Signal(bool, bool, bool)
     range_measure_requested = QtCore.Signal(bool ,bool, bool)
     stop_requested = QtCore.Signal()
     update_interval_changed = QtCore.Signal(float)
@@ -43,6 +43,8 @@ class DashboardWidget(QtWidgets.QWidget):
         self.z_pos_spin_box.setDecimals(6)
         self.z_pos_spin_box.setRange(-10000, 10000)
         self.z_pos_spin_box.setSuffix(" mm")
+
+        self.add_position_button = QtWidgets.QToolButton(self)
 
         self.copy_position_button = QtWidgets.QToolButton(self)
 
@@ -219,14 +221,16 @@ class DashboardWidget(QtWidgets.QWidget):
         position_layout.addWidget(self.x_pos_spin_box, 1, 0)
         position_layout.addWidget(self.y_pos_spin_box, 1, 1)
         position_layout.addWidget(self.z_pos_spin_box, 1, 2)
-        position_layout.addWidget(self.copy_position_button, 1, 3)
-        position_layout.addWidget(self.pos_flash_label, 1, 4)
-        position_layout.setColumnStretch(0, 1)
-        position_layout.setColumnStretch(1, 1)
-        position_layout.setColumnStretch(2, 1)
-        position_layout.setColumnStretch(3, 1)
+        position_layout.addWidget(self.add_position_button, 1, 3)
+        position_layout.addWidget(self.copy_position_button, 1, 4)
+        position_layout.addWidget(self.pos_flash_label, 1, 5)
+        position_layout.setColumnStretch(0, 2)
+        position_layout.setColumnStretch(1, 2)
+        position_layout.setColumnStretch(2, 2)
+        position_layout.setColumnStretch(3, 2)
         position_layout.setColumnStretch(4, 1)
         position_layout.setColumnStretch(5, 1)
+        position_layout.setColumnStretch(6, 2)
 
         x_calibration_layout = QtWidgets.QHBoxLayout()
         x_calibration_layout.addWidget(self.x_cal_button)
@@ -379,6 +383,7 @@ class DashboardWidget(QtWidgets.QWidget):
         self.y_pos_spin_box.setValue(y)
         self.z_pos_spin_box.setValue(z)
         self.pos_flash_label.flash()
+        self.positions_widget.set_current_position(x, y, z)
 
     def table_position(self) -> tuple[float, float, float]:
         x = self.x_pos_spin_box.value()
@@ -391,6 +396,9 @@ class DashboardWidget(QtWidgets.QWidget):
         self.x_calibration_line_edit.setText(format(x))
         self.y_calibration_line_edit.setText(format(y))
         self.z_calibration_line_edit.setText(format(z))
+
+    def show_add_position_dialog(self) -> None:
+        self.positions_widget.on_add()
 
     def clear_positions(self) -> None:
         self.positions_widget.clear_positions()
