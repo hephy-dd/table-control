@@ -1,6 +1,27 @@
 from importlib import resources
+from typing import Iterable
+
 
 from PySide6 import QtCore, QtGui, QtWidgets
+
+
+def make_unique_name(base: str, existing: Iterable[str], sep: str = "_") -> str:
+    existing_set = set(existing)
+
+    if base not in existing_set:
+        return base
+
+    root = base
+    left, mid, right = base.rpartition(sep)
+    if mid and right.isdigit():
+        root = left
+
+    i = 1
+    while True:
+        candidate = f"{root}{sep}{i}"
+        if candidate not in existing_set:
+            return candidate
+        i += 1
 
 
 def load_icon(filename: str) -> QtGui.QIcon:

@@ -1,4 +1,8 @@
+from dataclasses import dataclass
+
 from PySide6 import QtCore, QtWidgets
+
+from .utils import make_unique_name
 
 
 def safe_float(text: str) -> float:
@@ -8,14 +12,13 @@ def safe_float(text: str) -> float:
         return float(0)
 
 
+@dataclass
 class TablePosition:
-
-    def __init__(self, name:str, x: float, y: float, z: float, comment: str):
-        self.name: str = name
-        self.x: float = x
-        self.y: float = y
-        self.z: float = z
-        self.comment: str = comment
+    name: str
+    x: float
+    y: float
+    z: float
+    comment: str
 
 
 def get_position(item) -> TablePosition:
@@ -45,6 +48,8 @@ class TablePositionsWidget(QtWidgets.QWidget):
 
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
+
+        self._current_position: tuple[float, float, float] = 0.0, 0.0, 0.0
 
         self.positions_tree = QtWidgets.QTreeWidget(self)
         self.positions_tree.setHeaderLabels(["Name", "X", "Y", "Z", "Comment"])
@@ -76,14 +81,15 @@ class TablePositionsWidget(QtWidgets.QWidget):
         self.move_button.clicked.connect(self.on_move_clicked)
 
         layout = QtWidgets.QGridLayout(self)
-        layout.addWidget(self.positions_tree, 0, 0, 7, 1)
+        layout.addWidget(self.positions_tree, 0, 0, 8, 1)
         layout.addWidget(self.add_button, 0, 1)
         layout.addWidget(self.edit_button, 1, 1)
-        layout.addWidget(self.up_button, 2, 1)
-        layout.addWidget(self.down_button, 3, 1)
-        layout.addWidget(self.remove_button, 4, 1)
-        layout.setRowStretch(5, 1)
-        layout.addWidget(self.move_button, 6, 1)
+        layout.addWidget(self.remove_button, 2, 1)
+        layout.setRowStretch(3, 1)
+        layout.addWidget(self.up_button, 4, 1)
+        layout.addWidget(self.down_button, 5, 1)
+        layout.setRowStretch(6, 1)
+        layout.addWidget(self.move_button, 7, 1)
 
         self.update_buttons()
 
@@ -129,10 +135,17 @@ class TablePositionsWidget(QtWidgets.QWidget):
     def enter_moving(self) -> None:
         self.setEnabled(False)
 
+    def set_current_position(self, x: float, y: float, z: float) -> None:
+        self._current_position = x, y, z
+
     @QtCore.Slot()
     def on_add(self) -> None:
-        position = TablePosition("Unnamed", 0.0, 0.0, 0.0, "")
+        names = [p.name for p in self.positions()]
+        name = make_unique_name("Unnamed", names)
+        x, y, z = self._current_position
+        position = TablePosition(name, x, y, z, "")
         dialog = TablePositionEditDialog(self)
+        dialog.setWindowTitle("Add Position")
         dialog.set_position(position)
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
             self.add_position(dialog.position())
@@ -174,9 +187,25 @@ class TablePositionsWidget(QtWidgets.QWidget):
     @QtCore.Slot()
     def on_remove(self) -> None:
         current_item = self.positions_tree.currentItem()
-        if current_item:
-            index = self.positions_tree.indexOfTopLevelItem(current_item)
+        if not current_item:
+            return
+
+        name = current_item.text(0)
+        reply = QtWidgets.QMessageBox.question(
+            self,
+            "Remove position",
+            f"Remove position {name!r}?",
+            QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+            QtWidgets.QMessageBox.StandardButton.No,
+        )
+
+        if reply != QtWidgets.QMessageBox.StandardButton.Yes:
+            return
+
+        index = self.positions_tree.indexOfTopLevelItem(current_item)
+        if index >= 0:
             self.positions_tree.takeTopLevelItem(index)
+
         self.update_buttons()
 
     @QtCore.Slot()
