@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Copy current position menu action and button (#35).
+
 ### Changed
 
 - Run Ruff with default rules and fix all reported issues (#33).

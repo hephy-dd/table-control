@@ -62,7 +62,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stop_action = QtGui.QAction(self)
         self.stop_action.setText("&Stop")
         self.stop_action.setIcon(load_icon("stop.svg"))
-        self.stop_action.setShortcut("Ctrl+P")
+        self.stop_action.setShortcut(QtGui.QKeySequence.StandardKey.Cancel)
+        self.stop_action.setShortcutContext(QtCore.Qt.ShortcutContext.ApplicationShortcut)
         self.stop_action.setStatusTip("Stop current movements")
         self.stop_action.triggered.connect(self.abort)
 
@@ -129,7 +130,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dashboard.absolute_move_requested.connect(self.table_controller.move_absolute)
         self.dashboard.calibrate_requested.connect(self.table_controller.calibrate)
         self.dashboard.range_measure_requested.connect(self.table_controller.range_measure)
-        self.dashboard.stop_requested.connect(self.stop_action.trigger)
         self.dashboard.update_interval_changed.connect(self.table_controller.set_update_interval)
         self.dashboard.z_limit_enabled_changed.connect(self.table_controller.set_z_limit_enabled)
         self.dashboard.z_limit_changed.connect(self.table_controller.set_z_limit)
