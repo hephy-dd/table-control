@@ -1,6 +1,7 @@
 import logging
 import traceback
 import webbrowser
+from pathlib import Path
 
 from PySide6 import QtCore, QtGui, QtStateMachine, QtWidgets
 
@@ -12,11 +13,11 @@ from .preferences import PreferencesDialog
 from .controller import TableController
 from .connection import ConnectionConfig, ConnectionDialog
 from .dashboard import DashboardWidget, TablePosition
+from .positions import export_positions_csv
 from .utils import load_icon, load_text
 
 
 class MainWindow(QtWidgets.QMainWindow):
-
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
 
@@ -28,6 +29,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.table_controller.failed.connect(self.show_exception)
 
         self.connection_configs: dict[str, ConnectionConfig] = {}
+
+        self.export_positions_action = QtGui.QAction(self)
+        self.export_positions_action.setText("&Positions...")
+        self.export_positions_action.setShortcut("Ctrl+Shift+E")
+        self.export_positions_action.setStatusTip("Export positions to file")
+        self.export_positions_action.triggered.connect(self.export_positions)
 
         self.quit_action = QtGui.QAction(self)
         self.quit_action.setText("&Quit")
@@ -97,7 +104,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.about_action.setStatusTip("About this application")
         self.about_action.triggered.connect(self.show_about)
 
+        self.export_menu = QtWidgets.QMenu("&Export")
+        self.export_menu.addAction(self.export_positions_action)
+
         self.file_menu = self.menuBar().addMenu("&File")
+        self.file_menu.addMenu(self.export_menu)
+        self.file_menu.addSeparator()
         self.file_menu.addAction(self.quit_action)
 
         self.edit_menu = self.menuBar().addMenu("&Edit")
@@ -256,6 +268,51 @@ class MainWindow(QtWidgets.QMainWindow):
         self.table_controller.set_z_limit(self.dashboard.z_limit())
 
     @QtCore.Slot()
+    def export_positions(self) -> None:
+        settings = QtCore.QSettings()
+        settings.beginGroup("mainwindow")
+
+        default_dir = Path.home()
+        last_dir = settings.value("export_positions/last_dir")
+        if isinstance(last_dir, str):
+            last_dir = Path(last_dir)
+        else:
+            last_dir = default_dir
+        if not last_dir.exists() or not last_dir.is_dir():
+            last_dir = default_dir
+
+        # suggest filename
+        suggested = last_dir / "positions.csv"
+
+        filename, _selected_filter = QtWidgets.QFileDialog.getSaveFileName(
+            self,
+            "Export Positions",
+            str(suggested),
+            "CSV files (*.csv)",
+        )
+        if not filename:
+            return
+
+        path = Path(filename)
+        if path.suffix.lower() != ".csv":
+            path = path.with_suffix(".csv")
+
+        # store last directory
+        settings.setValue("export_positions/last_dir", str(path.parent))
+        settings.endGroup()
+
+        positions = self.dashboard.positions()
+
+        try:
+            export_positions_csv(positions, str(path))
+        except Exception as exc:
+            QtWidgets.QMessageBox.critical(
+                self,
+                "Export Positions",
+                f"Failed to export positions to:\n{path}\n\n{exc}",
+            )
+
+    @QtCore.Slot()
     def add_current_position(self) -> None:
         self.dashboard.show_add_position_dialog()
 
@@ -342,6 +399,7 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot()
     def enter_disconnected(self) -> None:
         self.plugin_manager.dispatch("before_enter_disconnected", (self,))
+        self.export_positions_action.setEnabled(True)
         self.add_position_action.setEnabled(False)
         self.copy_position_action.setEnabled(False)
         self.preferences_action.setEnabled(True)
@@ -356,6 +414,7 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot()
     def enter_connected(self) -> None:
         self.plugin_manager.dispatch("before_enter_connected", (self,))
+        self.export_positions_action.setEnabled(True)
         self.add_position_action.setEnabled(True)
         self.copy_position_action.setEnabled(True)
         self.preferences_action.setEnabled(True)
@@ -371,6 +430,7 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot()
     def enter_moving(self) -> None:
         self.plugin_manager.dispatch("before_enter_moving", (self,))
+        self.export_positions_action.setEnabled(False)
         self.add_position_action.setEnabled(False)
         self.copy_position_action.setEnabled(False)
         self.preferences_action.setEnabled(False)
@@ -385,7 +445,11 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.Slot(QtGui.QCloseEvent)
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         if not self.connect_action.isEnabled():
-            result = QtWidgets.QMessageBox.question(self, "Quit?", "Close current connection?")
+            result = QtWidgets.QMessageBox.question(
+                self,
+                "Quit?",
+                "Close current connection?",
+            )
             if result != QtWidgets.QMessageBox.StandardButton.Yes:
                 event.ignore()
                 return

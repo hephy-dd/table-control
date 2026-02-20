@@ -1,15 +1,18 @@
+import csv
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any, Iterable, TextIO
 
 from PySide6 import QtCore, QtWidgets
 
 from .utils import make_unique_name
 
 
-def safe_float(text: str) -> float:
+def safe_float(value: Any) -> float:
     try:
-        return float(text)
-    except Exception:
-        return float(0)
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
 
 
 @dataclass
@@ -39,6 +42,20 @@ def set_position(item, position: TablePosition) -> None:
     item.setText(3, f"{position.z:.6f}")
     item.setData(3, QtCore.Qt.ItemDataRole.UserRole, position.z)
     item.setText(4, position.comment)
+
+
+def write_positions_csv(positions: Iterable[TablePosition], fp: TextIO) -> None:
+    writer = csv.writer(fp)
+    writer.writerow(["name", "x", "y", "z", "comment"])
+    for p in positions:
+        writer.writerow([p.name, p.x, p.y, p.z, p.comment])
+
+
+def export_positions_csv(positions: Iterable[TablePosition], filename: str) -> None:
+    path = Path(filename)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with path.open("w", encoding="utf-8", newline="") as fp:
+        write_positions_csv(positions, fp)
 
 
 class TablePositionsWidget(QtWidgets.QWidget):
@@ -108,12 +125,14 @@ class TablePositionsWidget(QtWidgets.QWidget):
             self.positions_tree.takeTopLevelItem(0)
         self.update_buttons()
 
-    def add_position(self, position: TablePosition) -> None:
+    def add_position(self, position: TablePosition, set_current: bool = False) -> None:
         item = QtWidgets.QTreeWidgetItem(self.positions_tree)
-        item.setTextAlignment(1, QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
-        item.setTextAlignment(2, QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
-        item.setTextAlignment(3, QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
+        for col in (1, 2, 3):
+            item.setTextAlignment(col, QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
         set_position(item, position)
+        if set_current:
+            self.positions_tree.setCurrentItem(item)
+            self.positions_tree.scrollToItem(item)
         self.update_buttons()
 
     def positions(self) -> list[TablePosition]:
@@ -147,7 +166,7 @@ class TablePositionsWidget(QtWidgets.QWidget):
         dialog.setWindowTitle("Add Position")
         dialog.set_position(position)
         if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
-            self.add_position(dialog.position())
+            self.add_position(dialog.position(), set_current=True)
         self.update_buttons()
 
     @QtCore.Slot()
@@ -210,8 +229,10 @@ class TablePositionsWidget(QtWidgets.QWidget):
     @QtCore.Slot()
     def on_move_clicked(self) -> None:
         item = self.positions_tree.currentItem()
-        if item:
-            position = get_position(item)
+        if not item:
+            return
+
+        position = get_position(item)
         self.move_requested.emit(position.x, position.y, position.z)
 
     def on_current_position_changed(self, current: QtWidgets.QTreeWidgetItem | None, previous: QtWidgets.QTreeWidgetItem | None) -> None:
