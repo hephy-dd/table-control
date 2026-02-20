@@ -7,9 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-02-20
+
 ### Added
 
-- Show copied position notification in status bar.
+- Export positions to CSV (#39).
+- Show a status bar notification when a position is copied.
+
+### Changed
+
+- Refactor `PluginManager` and standardize hooks (#38).
+
+### Fixed
+
+- Automatically select added position after a successful **Add Position** dialog.
 
 ## [0.9.0] - 2026-02-19
 
@@ -130,7 +141,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for Hydra controller.
 - Support for Corvus controller.
 
-[unreleased]: https://github.com/hephy-dd/table-control/compare/v0.9.0...HEAD
+[unreleased]: https://github.com/hephy-dd/table-control/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/hephy-dd/table-control/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/hephy-dd/table-control/compare/v0.8.1...v0.9.0
 [0.8.1]: https://github.com/hephy-dd/table-control/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/hephy-dd/table-control/compare/v0.7.0...v0.8.0
