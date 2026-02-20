@@ -6,16 +6,13 @@ __all__ = ["DummyPlugin"]
 
 
 class DummyPlugin:
-
-    def install(self, window) -> None:
+    def on_install(self, window) -> None:
         window.register_connection("Dummy", DummyDriver, 0)
 
-    def uninstall(self, window) -> None:
-        ...
+    def on_uninstall(self, window) -> None: ...
 
 
 class DummyDriver(Driver):
-
     def __init__(self, resources) -> None:
         super().__init__(resources)
         self._pos: list[float] = [0.0, 0.0, 0.0]
@@ -30,8 +27,7 @@ class DummyDriver(Driver):
     def identify(self) -> list[str]:
         return ["Dummy, v1.0"]
 
-    def configure(self) -> None:
-        ...
+    def configure(self) -> None: ...
 
     def abort(self) -> None:
         self._update_motion()
@@ -61,7 +57,7 @@ class DummyDriver(Driver):
             self._start_pos[2] + delta.z,
         ]
         self._t_start = time.monotonic()
-        self._moving  = True
+        self._moving = True
 
     def move_absolute(self, position: Vector) -> None:
         """Begin an absolute move at the velocities in self._vel."""
@@ -73,16 +69,13 @@ class DummyDriver(Driver):
             position.z,
         ]
         self._t_start = time.monotonic()
-        self._moving  = True
+        self._moving = True
 
-    def calibrate(self, axes: VectorMask) -> None:
-        ...
+    def calibrate(self, axes: VectorMask) -> None: ...
 
-    def range_measure(self, axes: VectorMask) -> None:
-        ...
+    def range_measure(self, axes: VectorMask) -> None: ...
 
-    def enable_joystick(self, value: bool) -> None:
-        ...
+    def enable_joystick(self, value: bool) -> None: ...
 
     def _clamp_step(self, start: float, target: float, vel: float, dt: float) -> float:
         """Compute new coordinate along one axis, moving from start toward target
