@@ -16,7 +16,7 @@ BAUD_RATES = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 46080
 
 
 @dataclass
-class ConnectionConfig:
+class ConnectionType:
     name: str
     driver_cls: type[Driver]
     n_resources: int
@@ -48,10 +48,18 @@ class ResourceGroupBox(QtWidgets.QGroupBox):
         self.termination_combo_box.addItem("CR", "\r")
         self.termination_combo_box.addItem("LF", "\n")
 
+        self.timeout_label = QtWidgets.QLabel("Timeout", self)
+        self.timeout_spin_box = QtWidgets.QDoubleSpinBox(self)
+        self.timeout_spin_box.setDecimals(1)
+        self.timeout_spin_box.setRange(0.0, 120.0)
+        self.timeout_spin_box.setValue(10.0)
+        self.timeout_spin_box.setSuffix(" s")
+
         layout = QtWidgets.QFormLayout(self)
         layout.addRow(self.resource_name_label, self.resource_name_line_edit)
         layout.addRow(self.baud_rate_label, self.baud_rate_combo_box)
         layout.addRow(self.termination_label, self.termination_combo_box)
+        layout.addRow(self.timeout_label, self.timeout_spin_box)
 
         self.resource_name_line_edit.textChanged.connect(self._update_baud_visibility)
 
@@ -67,7 +75,7 @@ class ResourceGroupBox(QtWidgets.QGroupBox):
         return self.termination_combo_box.currentData() or "\r\n"
 
     def timeout(self) -> float:
-        return 4.0
+        return self.timeout_spin_box.value()
 
     def set_slot_enabled(self, enabled: bool) -> None:
         self.setEnabled(enabled)
@@ -87,6 +95,7 @@ class ResourceGroupBox(QtWidgets.QGroupBox):
         return {
             "resource_name": self.resource_name(),
             "termination": self.termination(),
+            "timeout": self.timeout(),
             "baud_rate": self.baud_rate(),
         }
 
@@ -94,7 +103,18 @@ class ResourceGroupBox(QtWidgets.QGroupBox):
         self.resource_name_line_edit.setText(data.get("resource_name", ""))
         self.termination_combo_box.setCurrentIndex(self.termination_combo_box.findData(data.get("termination", "\r\n")))
 
-        baud_rate = data.get("baud_rate", 9600)
+        try:
+            timeout = float(data.get("timeout", 10))
+        except (TypeError, ValueError):
+            raise ValueError("timeout must be a float")
+
+        self.timeout_spin_box.setValue(timeout)
+
+        try:
+            baud_rate = int(data.get("baud_rate", 9600))
+        except (TypeError, ValueError):
+            raise ValueError("baud rate must be an integer")
+
         index = self.baud_rate_combo_box.findData(baud_rate)
         if index >= 0:
             self.baud_rate_combo_box.setCurrentIndex(index)
@@ -152,7 +172,7 @@ class ConnectionDialog(QtWidgets.QDialog):
 
     def _update_inputs(self, index: int) -> None:
         config = self.driver_combo_box.itemData(index)
-        if not isinstance(config, ConnectionConfig):
+        if not isinstance(config, ConnectionType):
             for group_box in self.resource_group_boxes:
                 group_box.set_slot_enabled(False)
             return
@@ -184,11 +204,11 @@ class ConnectionDialog(QtWidgets.QDialog):
         settings.setValue("resources", [group_box.to_settings_dict() for group_box in self.resource_group_boxes])
         settings.endGroup()
 
-    def add_connection(self, connection: ConnectionConfig) -> None:
+    def add_connection(self, connection: ConnectionType) -> None:
         self.driver_combo_box.addItem(connection.name, connection)
 
     def create_connection(self) -> Connection:
-        connection: ConnectionConfig = self.driver_combo_box.currentData()
+        connection: ConnectionType = self.driver_combo_box.currentData()
         name = connection.name
         driver = connection.driver_cls
         n_resources = connection.n_resources
