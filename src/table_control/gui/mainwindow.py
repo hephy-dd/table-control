@@ -11,7 +11,7 @@ from ..core.pluginmanager import PluginManager
 from . import APP_TITLE, APP_VERSION, APP_CONTENTS_URL
 from .preferences import PreferencesDialog
 from .controller import TableController
-from .connection import ConnectionConfig, ConnectionDialog
+from .connection import ConnectionType, ConnectionDialog
 from .dashboard import DashboardWidget, TablePosition
 from .positions import export_positions_csv
 from .utils import load_icon, load_text
@@ -28,7 +28,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.table_controller = TableController()
         self.table_controller.failed.connect(self.show_exception)
 
-        self.connection_configs: dict[str, ConnectionConfig] = {}
+        self.connection_configs: dict[str, ConnectionType] = {}
 
         self.export_positions_action = QtGui.QAction(self)
         self.export_positions_action.setText("&Positions...")
@@ -202,7 +202,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plugin_manager.notify("uninstall", self)
 
     def register_connection(self, name: str, driver_cls: type[Driver], n_resources: int) -> None:
-        self.connection_configs.update({name: ConnectionConfig(name, driver_cls, n_resources)})
+        self.connection_configs.update({name: ConnectionType(name, driver_cls, n_resources)})
 
     def read_settings(self) -> None:
         settings = self.settings
@@ -365,6 +365,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def setup_connection(self) -> bool:
         dialog = ConnectionDialog(self)
+        dialog.setMinimumWidth(240)
         for connection_config in self.connection_configs.values():
             dialog.add_connection(connection_config)
         dialog.read_settings()
