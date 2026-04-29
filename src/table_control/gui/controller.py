@@ -3,9 +3,10 @@ import threading
 import time
 import queue
 import logging
+from collections.abc import Iterator, Sequence
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
-from typing import Callable, Iterator, Sequence
+from typing import Callable
 
 from PySide6 import QtCore
 
@@ -105,7 +106,7 @@ class AbortRequest(Exception): ...
 class CalibrationError(Exception): ...
 
 
-def poll_interval(steps: Sequence[float]):
+def poll_interval(steps: Sequence[float]) -> Iterator[float]:
     for step in steps:
         yield step
     while True:
@@ -195,7 +196,20 @@ class CalibrateCommand(Command):
         context.set_moving(True)
         try:
             logger.info("calibrate: x=%d y=%d z=%d", self.x, self.y, self.z)
-            context.perform_motion(lambda driver: driver.calibrate(VectorMask(self.x, self.y, self.z)))
+
+            def calibrate(driver):
+                driver.calibrate(VectorMask(self.x, self.y, self.z))
+
+                while True:
+                    time.sleep(1.0)
+                    try:
+                        if not driver.is_moving():
+                            break
+                    except Exception:
+                        logger.warning("failed to read calibration moving state")
+                    context.raise_on_abort()
+
+            context.perform_motion(calibrate)
         finally:
             context.set_moving(False)
 
@@ -210,7 +224,20 @@ class RangeMeasureCommand(Command):
         context.set_moving(True)
         try:
             logger.info("range measure: x=%d y=%d z=%d", self.x, self.y, self.z)
-            context.perform_motion(lambda driver: driver.range_measure(VectorMask(self.x, self.y, self.z)))
+
+            def range_measure(driver):
+                driver.range_measure(VectorMask(self.x, self.y, self.z))
+
+                while True:
+                    time.sleep(1.0)
+                    try:
+                        if not driver.is_moving():
+                            break
+                    except Exception:
+                        logger.warning("failed to read range measure moving state")
+                    context.raise_on_abort()
+
+            context.perform_motion(range_measure)
         finally:
             context.set_moving(False)
 
@@ -286,7 +313,9 @@ class TableContext(Context):
         self.raise_on_abort()
         motion_timeout: float = self._controller.motion_timeout
         interval = poll_interval([0.010, 0.100, 0.250, 0.500, 1.0])
+
         motion(self.driver)  # start async motion
+
         t0 = time.monotonic()
         while self.driver.is_moving():
             self.raise_on_abort()
