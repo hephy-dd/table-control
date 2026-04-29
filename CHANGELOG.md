@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Implemented safe movement pollign for calibration and range measure.
+- Implemented safe movement polling for calibration and range measure.
 
 ## [0.11.0] - 2026-04-15
 
