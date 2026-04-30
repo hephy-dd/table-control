@@ -64,7 +64,10 @@ class LegacySocketPlugin:
             thread.start()
 
     def read_settings(self, settings: QtCore.QSettings) -> dict:
-        return settings.value("plugins/legacy_socket", {})  # type: ignore
+        legacy_socket = settings.value("plugins/legacy_socket", {})
+        if isinstance(legacy_socket, dict):
+            return legacy_socket
+        return {}
 
     def write_settings(self, settings: QtCore.QSettings, data: dict) -> None:
         settings.setValue("plugins/legacy_socket", data)

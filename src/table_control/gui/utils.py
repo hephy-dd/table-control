@@ -40,9 +40,12 @@ def load_text(filename: str) -> str:
 
 
 class FlashLabel(QtWidgets.QLabel):
-    def __init__(self, flash_duration_ms: int = 250,
-                 circle_color: QtGui.QColor | None = None,
-                 parent: QtWidgets.QWidget | None = None) -> None:
+    def __init__(
+        self,
+        flash_duration_ms: int = 250,
+        circle_color: QtGui.QColor | None = None,
+        parent: QtWidgets.QWidget | None = None,
+    ) -> None:
         super().__init__(parent)
         self.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
         self.setAttribute(QtCore.Qt.WidgetAttribute.WA_TranslucentBackground, True)
@@ -63,7 +66,7 @@ class FlashLabel(QtWidgets.QLabel):
         self._flashing = False
         self.update()
 
-    def paintEvent(self, event: QtGui.QPaintEvent) -> None:
+    def paintEvent(self, event: QtGui.QPaintEvent) -> None:  # pyright: ignore [reportIncompatibleMethodOverride]
         # Draw the normal label (text etc.)
         super().paintEvent(event)
 

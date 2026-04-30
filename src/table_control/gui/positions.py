@@ -11,7 +11,7 @@ from .utils import make_unique_name
 def safe_float(value: Any) -> float:
     try:
         return float(value)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return 0.0
 
 
@@ -59,7 +59,6 @@ def export_positions_csv(positions: Iterable[TablePosition], filename: str) -> N
 
 
 class TablePositionsWidget(QtWidgets.QWidget):
-
     move_requested = QtCore.Signal(float, float, float)
 
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
@@ -116,7 +115,9 @@ class TablePositionsWidget(QtWidgets.QWidget):
         self.add_button.setEnabled(True)
         self.edit_button.setEnabled(True if current_item else False)
         self.up_button.setEnabled(True if current_item and index != 0 else False)
-        self.down_button.setEnabled(True if current_item and index + 1 < count else False)
+        self.down_button.setEnabled(
+            True if current_item and index + 1 < count else False
+        )
         self.remove_button.setEnabled(True if current_item else False)
         self.move_button.setEnabled(True if current_item else False)
 
@@ -128,7 +129,11 @@ class TablePositionsWidget(QtWidgets.QWidget):
     def add_position(self, position: TablePosition, set_current: bool = False) -> None:
         item = QtWidgets.QTreeWidgetItem(self.positions_tree)
         for col in (1, 2, 3):
-            item.setTextAlignment(col, QtCore.Qt.AlignmentFlag.AlignRight | QtCore.Qt.AlignmentFlag.AlignVCenter)
+            item.setTextAlignment(
+                col,
+                QtCore.Qt.AlignmentFlag.AlignRight
+                | QtCore.Qt.AlignmentFlag.AlignVCenter,
+            )
         set_position(item, position)
         if set_current:
             self.positions_tree.setCurrentItem(item)
@@ -213,7 +218,8 @@ class TablePositionsWidget(QtWidgets.QWidget):
             self,
             "Remove position",
             f"Remove position {name!r}?",
-            QtWidgets.QMessageBox.StandardButton.Yes | QtWidgets.QMessageBox.StandardButton.No,
+            QtWidgets.QMessageBox.StandardButton.Yes
+            | QtWidgets.QMessageBox.StandardButton.No,
             QtWidgets.QMessageBox.StandardButton.No,
         )
 
@@ -235,15 +241,20 @@ class TablePositionsWidget(QtWidgets.QWidget):
         position = get_position(item)
         self.move_requested.emit(position.x, position.y, position.z)
 
-    def on_current_position_changed(self, current: QtWidgets.QTreeWidgetItem | None, previous: QtWidgets.QTreeWidgetItem | None) -> None:
+    def on_current_position_changed(
+        self,
+        current: QtWidgets.QTreeWidgetItem | None,
+        previous: QtWidgets.QTreeWidgetItem | None,
+    ) -> None:
         self.update_buttons()
 
-    def on_position_double_clicked(self, item: QtWidgets.QTreeWidgetItem | None) -> None:
+    def on_position_double_clicked(
+        self, item: QtWidgets.QTreeWidgetItem | None
+    ) -> None:
         self.on_edit()
 
 
 class TablePositionEditDialog(QtWidgets.QDialog):
-
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
 

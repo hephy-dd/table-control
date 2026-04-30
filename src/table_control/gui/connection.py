@@ -12,7 +12,19 @@ from .controller import Connection
 logger = logging.getLogger(__name__)
 
 MAX_CONNECTIONS = 2
-BAUD_RATES = [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600]
+BAUD_RATES = [
+    1200,
+    2400,
+    4800,
+    9600,
+    19200,
+    38400,
+    57600,
+    115200,
+    230400,
+    460800,
+    921600,
+]
 
 
 @dataclass
@@ -40,7 +52,9 @@ class ResourceGroupBox(QtWidgets.QGroupBox):
         self.baud_rate_combo_box = QtWidgets.QComboBox(self)
         for rate in BAUD_RATES:
             self.baud_rate_combo_box.addItem(str(rate), rate)
-        self.baud_rate_combo_box.setCurrentIndex(self.baud_rate_combo_box.findData(9600))
+        self.baud_rate_combo_box.setCurrentIndex(
+            self.baud_rate_combo_box.findData(9600)
+        )
 
         self.termination_label = QtWidgets.QLabel("Termination", self)
         self.termination_combo_box = QtWidgets.QComboBox(self)
@@ -101,18 +115,20 @@ class ResourceGroupBox(QtWidgets.QGroupBox):
 
     def from_settings_dict(self, data: dict[str, Any]) -> None:
         self.resource_name_line_edit.setText(data.get("resource_name", ""))
-        self.termination_combo_box.setCurrentIndex(self.termination_combo_box.findData(data.get("termination", "\r\n")))
+        self.termination_combo_box.setCurrentIndex(
+            self.termination_combo_box.findData(data.get("termination", "\r\n"))
+        )
 
         try:
             timeout = float(data.get("timeout", 10))
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             raise ValueError("timeout must be a float")
 
         self.timeout_spin_box.setValue(timeout)
 
         try:
             baud_rate = int(data.get("baud_rate", 9600))
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             raise ValueError("baud rate must be an integer")
 
         index = self.baud_rate_combo_box.findData(baud_rate)
@@ -201,7 +217,10 @@ class ConnectionDialog(QtWidgets.QDialog):
         settings = QtCore.QSettings()
         settings.beginGroup("connection_dialog")
         settings.setValue("current_driver", self.driver_combo_box.currentText())
-        settings.setValue("resources", [group_box.to_settings_dict() for group_box in self.resource_group_boxes])
+        settings.setValue(
+            "resources",
+            [group_box.to_settings_dict() for group_box in self.resource_group_boxes],
+        )
         settings.endGroup()
 
     def add_connection(self, connection: ConnectionType) -> None:

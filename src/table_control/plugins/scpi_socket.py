@@ -77,7 +77,10 @@ class SCPISocketPlugin:
             thread.start()
 
     def read_settings(self, settings: QtCore.QSettings) -> dict:
-        return settings.value("plugins/scpi_socket", {})  # type: ignore
+        scpi_socket = settings.value("plugins/scpi_socket", {})
+        if isinstance(scpi_socket, dict):
+            return scpi_socket
+        return {}
 
     def write_settings(self, settings: QtCore.QSettings, data: dict) -> None:
         settings.setValue("plugins/scpi_socket", data)

@@ -8,7 +8,6 @@ from .utils import load_icon
 
 
 class Application:
-
     def __init__(self) -> None:
         self.app = QtWidgets.QApplication(sys.argv)
         self.app.setApplicationName(APP_NAME)
