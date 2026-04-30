@@ -1,10 +1,10 @@
 emulators:
   corvus:
-    module: itk.corvustt
+    model: urn:comet:model:itk:corvustt
     port: 12000
   hydra1:
-    module: itk.hydra
+    model: urn:comet:model:itk:hydra
     port: 12001
   hydra2:
-    module: itk.hydra
+    model: urn:comet:model:itk:hydra
     port: 12002
