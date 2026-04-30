@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Replaced `mypy` with `pyright` as the type checker in the `tox` workflow, fixed all(#41).
+
+### Fixed
+
+- Resolved all reported `pyright` type errors across the codebase (#41).
+
 ## [0.12.0] - 2026-04-29
 
 ### Changed
