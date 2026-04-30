@@ -7,7 +7,6 @@ logger = logging.getLogger(__name__)
 
 
 class PreferencesDialog(QtWidgets.QDialog):
-
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
         super().__init__(parent)
 
@@ -35,8 +34,6 @@ class PreferencesDialog(QtWidgets.QDialog):
         index = self.tab_widget.indexOf(widget)
         self.tab_widget.removeTab(index)
 
-    def read_settings(self, settings: QtCore.QSettings) -> None:
-        ...
+    def read_settings(self, settings: QtCore.QSettings) -> None: ...
 
-    def write_settings(self, settings: QtCore.QSettings) -> None:
-        ...
+    def write_settings(self, settings: QtCore.QSettings) -> None: ...

@@ -8,16 +8,17 @@ class CorvusPlugin:
     def on_install(self, window) -> None:
         window.register_connection("Corvus", CorvusDriver, 1)
 
-    def on_uninstall(self, window) -> None:
-        ...
+    def on_uninstall(self, window) -> None: ...
 
 
 def identity(resource: Resource) -> str:
-    return " ".join([
-        resource.query("identify").strip(),
-        resource.query("version").strip(),
-        resource.query("getserialno").strip(),
-    ])
+    return " ".join(
+        [
+            resource.query("identify").strip(),
+            resource.query("version").strip(),
+            resource.query("getserialno").strip(),
+        ]
+    )
 
 
 def test_state(state: int, value: int) -> bool:
@@ -25,7 +26,6 @@ def test_state(state: int, value: int) -> bool:
 
 
 class CorvusDriver(Driver):
-
     def identify(self) -> list[str]:
         return [identity(res) for res in self.resources]
 

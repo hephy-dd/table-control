@@ -27,6 +27,7 @@ from ..core.commands import (
 
 logger = logging.getLogger(__name__)
 
+
 class DisconnectRequest(Exception): ...
 
 
@@ -51,7 +52,9 @@ class Connection:
 
 
 class TableContext:
-    def __init__(self, controller: "TableController", driver: Driver, logger: logging.Logger) -> None:
+    def __init__(
+        self, controller: "TableController", driver: Driver, logger: logging.Logger
+    ) -> None:
         self._controller = controller
         self.driver = driver
         self.logger = logger

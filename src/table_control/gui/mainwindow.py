@@ -77,7 +77,9 @@ class MainWindow(QtWidgets.QMainWindow):
         self.stop_action.setText("&Stop")
         self.stop_action.setIcon(load_icon("stop.svg"))
         self.stop_action.setShortcut(QtGui.QKeySequence.StandardKey.Cancel)
-        self.stop_action.setShortcutContext(QtCore.Qt.ShortcutContext.ApplicationShortcut)
+        self.stop_action.setShortcutContext(
+            QtCore.Qt.ShortcutContext.ApplicationShortcut
+        )
         self.stop_action.setStatusTip("Stop current movements")
         self.stop_action.triggered.connect(self.abort)
 
@@ -96,7 +98,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.about_qt_action = QtGui.QAction(self)
         self.about_qt_action.setText("About &Qt")
-        self.about_qt_action.setStatusTip("Show the Qt version and licensing information")
+        self.about_qt_action.setStatusTip(
+            "Show the Qt version and licensing information"
+        )
         self.about_qt_action.triggered.connect(self.show_about_qt)
 
         self.about_action = QtGui.QAction(self)
@@ -146,18 +150,32 @@ class MainWindow(QtWidgets.QMainWindow):
         self.dashboard = DashboardWidget(self)
         self.setCentralWidget(self.dashboard)
 
-        self.dashboard.relative_move_requested.connect(self.table_controller.move_relative)
-        self.dashboard.absolute_move_requested.connect(self.table_controller.move_absolute)
+        self.dashboard.relative_move_requested.connect(
+            self.table_controller.move_relative
+        )
+        self.dashboard.absolute_move_requested.connect(
+            self.table_controller.move_absolute
+        )
         self.dashboard.calibrate_requested.connect(self.table_controller.calibrate)
-        self.dashboard.range_measure_requested.connect(self.table_controller.range_measure)
-        self.dashboard.update_interval_changed.connect(self.table_controller.set_update_interval)
-        self.dashboard.z_limit_enabled_changed.connect(self.table_controller.set_z_limit_enabled)
+        self.dashboard.range_measure_requested.connect(
+            self.table_controller.range_measure
+        )
+        self.dashboard.update_interval_changed.connect(
+            self.table_controller.set_update_interval
+        )
+        self.dashboard.z_limit_enabled_changed.connect(
+            self.table_controller.set_z_limit_enabled
+        )
         self.dashboard.z_limit_changed.connect(self.table_controller.set_z_limit)
         self.dashboard.add_position_button.setDefaultAction(self.add_position_action)
         self.dashboard.copy_position_button.setDefaultAction(self.copy_position_action)
         self.table_controller.info_changed.connect(self.dashboard.set_controller)
-        self.table_controller.position_changed.connect(self.dashboard.set_table_position)
-        self.table_controller.calibration_changed.connect(self.dashboard.set_table_calibration)
+        self.table_controller.position_changed.connect(
+            self.dashboard.set_table_position
+        )
+        self.table_controller.calibration_changed.connect(
+            self.dashboard.set_table_calibration
+        )
 
         # Status bar
 
@@ -176,12 +194,24 @@ class MainWindow(QtWidgets.QMainWindow):
         self.moving_state = QtStateMachine.QState()
         self.moving_state.entered.connect(self.enter_moving)
 
-        self.connected_state.addTransition(self.table_controller.disconnected, self.disconnected_state)
-        self.disconnected_state.addTransition(self.table_controller.connected, self.connected_state)
-        self.disconnected_state.addTransition(self.table_controller.disconnected, self.disconnected_state)
-        self.connected_state.addTransition(self.dashboard.move_requested, self.moving_state)
-        self.moving_state.addTransition(self.table_controller.movement_finished, self.connected_state)
-        self.moving_state.addTransition(self.table_controller.disconnected, self.disconnected_state)
+        self.connected_state.addTransition(
+            self.table_controller.disconnected, self.disconnected_state
+        )
+        self.disconnected_state.addTransition(
+            self.table_controller.connected, self.connected_state
+        )
+        self.disconnected_state.addTransition(
+            self.table_controller.disconnected, self.disconnected_state
+        )
+        self.connected_state.addTransition(
+            self.dashboard.move_requested, self.moving_state
+        )
+        self.moving_state.addTransition(
+            self.table_controller.movement_finished, self.connected_state
+        )
+        self.moving_state.addTransition(
+            self.table_controller.disconnected, self.disconnected_state
+        )
 
         self.state_machine = QtStateMachine.QStateMachine(self)
         self.state_machine.addState(self.connected_state)
@@ -201,35 +231,43 @@ class MainWindow(QtWidgets.QMainWindow):
     def uninstall_plugins(self) -> None:
         self.plugin_manager.notify("uninstall", self)
 
-    def register_connection(self, name: str, driver_cls: type[Driver], n_resources: int) -> None:
-        self.connection_configs.update({name: ConnectionType(name, driver_cls, n_resources)})
+    def register_connection(
+        self, name: str, driver_cls: type[Driver], n_resources: int
+    ) -> None:
+        self.connection_configs.update(
+            {name: ConnectionType(name, driver_cls, n_resources)}
+        )
 
     def read_settings(self) -> None:
         settings = self.settings
         self.plugin_manager.notify("before_read_settings", settings)
         settings.beginGroup("mainwindow")
 
-        geometry: QtCore.QByteArray = settings.value("geometry", QtCore.QByteArray(), QtCore.QByteArray)  # type: ignore
-        state: QtCore.QByteArray = settings.value("state", QtCore.QByteArray(), QtCore.QByteArray)  # type: ignore
-        updateInterval: float = settings.value("update_interval", 1.0, float)  # type: ignore
-        z_limit_enabled: bool = settings.value("z_limit_enabled", False, bool)  # type: ignore
-        z_limit: float = settings.value("z_limit", 0.0, float)  # type: ignore
-        self.restoreGeometry(geometry)
-        self.restoreState(state)
-        self.dashboard.set_update_interval(updateInterval)
-        self.dashboard.set_z_limit_enabled(z_limit_enabled)
-        self.dashboard.set_z_limit(z_limit)
+        geometry = settings.value("geometry", QtCore.QByteArray(), QtCore.QByteArray)
+        self.restoreGeometry(geometry)  # type: ignore
+
+        state = settings.value("state", QtCore.QByteArray(), QtCore.QByteArray)
+        self.restoreState(state)  # type: ignore
+
+        update_interval = settings.value("update_interval", 1.0, float)
+        self.dashboard.set_update_interval(update_interval)  # type: ignore
+
+        z_limit_enabled = settings.value("z_limit_enabled", False, bool)
+        self.dashboard.set_z_limit_enabled(z_limit_enabled)  # type: ignore
+
+        z_limit = settings.value("z_limit", 0.0, float)
+        self.dashboard.set_z_limit(z_limit)  # type: ignore
 
         # Positions
         self.dashboard.clear_positions()
         size = settings.beginReadArray("positions")
         for i in range(size):
             settings.setArrayIndex(i)
-            name = settings.value("name", "", type=str)
-            x = settings.value("x", 0.0, type=float)
-            y = settings.value("y", 0.0, type=float)
-            z = settings.value("z", 0.0, type=float)
-            comment = settings.value("comment", "", type=str)
+            name = settings.value("name", "", str)
+            x = settings.value("x", 0.0, float)
+            y = settings.value("y", 0.0, float)
+            z = settings.value("z", 0.0, float)
+            comment = settings.value("comment", "", str)
             self.dashboard.add_position(TablePosition(name, x, y, z, comment))  # type: ignore
         settings.endArray()
 
@@ -272,14 +310,10 @@ class MainWindow(QtWidgets.QMainWindow):
         settings = QtCore.QSettings()
         settings.beginGroup("mainwindow")
 
-        default_dir = Path.home()
-        last_dir = settings.value("export_positions/last_dir")
-        if isinstance(last_dir, str):
-            last_dir = Path(last_dir)
+        if isinstance(last_dir_ := settings.value("export_positions/last_dir"), str):
+            last_dir = Path(last_dir_)
         else:
-            last_dir = default_dir
-        if not last_dir.exists() or not last_dir.is_dir():
-            last_dir = default_dir
+            last_dir = Path.home()
 
         # suggest filename
         suggested = last_dir / "positions.csv"
@@ -344,7 +378,11 @@ class MainWindow(QtWidgets.QMainWindow):
 
     @QtCore.Slot()
     def show_about(self) -> None:
-        QtWidgets.QMessageBox.about(self, "About", load_text("about.txt").format(title=APP_TITLE, version=APP_VERSION))
+        QtWidgets.QMessageBox.about(
+            self,
+            "About",
+            load_text("about.txt").format(title=APP_TITLE, version=APP_VERSION),
+        )
 
     @QtCore.Slot(Exception)
     def show_exception(self, exc) -> None:
@@ -357,7 +395,12 @@ class MainWindow(QtWidgets.QMainWindow):
         dialog.setStandardButtons(dialog.StandardButton.Ok)
         dialog.setDefaultButton(dialog.StandardButton.Ok)
         # Fix message box width
-        spacer = QtWidgets.QSpacerItem(448, 0, QtWidgets.QSizePolicy.Policy.Minimum, QtWidgets.QSizePolicy.Policy.Expanding)
+        spacer = QtWidgets.QSpacerItem(
+            448,
+            0,
+            QtWidgets.QSizePolicy.Policy.Minimum,
+            QtWidgets.QSizePolicy.Policy.Expanding,
+        )
         layout = dialog.layout()
         if isinstance(layout, QtWidgets.QGridLayout):
             layout.addItem(spacer, layout.rowCount(), 0, 1, layout.columnCount())
@@ -381,7 +424,9 @@ class MainWindow(QtWidgets.QMainWindow):
             self.connect_action.setEnabled(False)
             self.disconnect_action.setEnabled(False)
             self.table_controller.connect_table()
-            self.table_controller.request_enable_joystick(self.joystick_action.isChecked())  # reset
+            self.table_controller.request_enable_joystick(
+                self.joystick_action.isChecked()
+            )  # reset
 
     @QtCore.Slot()
     def disconnect_table(self) -> None:
@@ -443,7 +488,6 @@ class MainWindow(QtWidgets.QMainWindow):
         self.progress_bar.show()
         self.plugin_manager.notify("after_enter_moving", self)
 
-    @QtCore.Slot(QtGui.QCloseEvent)
     def closeEvent(self, event: QtGui.QCloseEvent) -> None:
         if not self.connect_action.isEnabled():
             result = QtWidgets.QMessageBox.question(

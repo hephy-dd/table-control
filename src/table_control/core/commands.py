@@ -66,7 +66,9 @@ class MoveAbsoluteCommand(Command):
 
             # No safety constraint: go straight to the target.
             if self.z_limit is None:
-                context.logger.info("move absolute: %.3f %.3f %.3f", self.x, self.y, self.z)
+                context.logger.info(
+                    "move absolute: %.3f %.3f %.3f", self.x, self.y, self.z
+                )
                 context.perform_motion(
                     lambda driver: driver.move_absolute(Vector(self.x, self.y, self.z))
                 )
@@ -87,7 +89,9 @@ class MoveAbsoluteCommand(Command):
 
             # 2) Move in X/Y at the current safe Z (do not change Z during XY travel).
             if pos.x != self.x or pos.y != self.y:
-                context.logger.info("move absolute: %.3f %.3f %.3f", self.x, self.y, current_z)
+                context.logger.info(
+                    "move absolute: %.3f %.3f %.3f", self.x, self.y, current_z
+                )
                 context.perform_motion(
                     lambda driver: driver.move_absolute(
                         Vector(self.x, self.y, current_z)
@@ -96,7 +100,9 @@ class MoveAbsoluteCommand(Command):
 
             # 3) Finally, adjust Z to the exact target.
             if self.z != current_z:
-                context.logger.info("move absolute: %.3f %.3f %.3f", self.x, self.y, self.z)
+                context.logger.info(
+                    "move absolute: %.3f %.3f %.3f", self.x, self.y, self.z
+                )
                 context.perform_motion(
                     lambda driver: driver.move_absolute(Vector(self.x, self.y, self.z))
                 )
@@ -125,7 +131,9 @@ class CalibrateCommand(Command):
                         if not driver.is_moving():
                             break
                     except Exception:
-                        context.logger.warning("failed to read calibration moving state")
+                        context.logger.warning(
+                            "failed to read calibration moving state"
+                        )
                     context.raise_on_abort()
 
             context.perform_motion(calibrate)
@@ -153,7 +161,9 @@ class RangeMeasureCommand(Command):
                         if not driver.is_moving():
                             break
                     except Exception:
-                        context.logger.warning("failed to read range measure moving state")
+                        context.logger.warning(
+                            "failed to read range measure moving state"
+                        )
                     context.raise_on_abort()
 
             context.perform_motion(range_measure)

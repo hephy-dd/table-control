@@ -9,12 +9,11 @@ def decode_calibration(value: int) -> str:
 
 
 class DashboardWidget(QtWidgets.QWidget):
-
     move_requested = QtCore.Signal()
     relative_move_requested = QtCore.Signal(float, float, float)
     absolute_move_requested = QtCore.Signal(float, float, float)
     calibrate_requested = QtCore.Signal(bool, bool, bool)
-    range_measure_requested = QtCore.Signal(bool ,bool, bool)
+    range_measure_requested = QtCore.Signal(bool, bool, bool)
     update_interval_changed = QtCore.Signal(float)
     z_limit_enabled_changed = QtCore.Signal(bool)
     z_limit_changed = QtCore.Signal(float)
@@ -23,21 +22,27 @@ class DashboardWidget(QtWidgets.QWidget):
         super().__init__(parent)
 
         self.x_pos_spin_box = QtWidgets.QDoubleSpinBox(self)
-        self.x_pos_spin_box.setButtonSymbols(QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons)
+        self.x_pos_spin_box.setButtonSymbols(
+            QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons
+        )
         self.x_pos_spin_box.setReadOnly(True)
         self.x_pos_spin_box.setDecimals(6)
         self.x_pos_spin_box.setRange(-10000, 10000)
         self.x_pos_spin_box.setSuffix(" mm")
 
         self.y_pos_spin_box = QtWidgets.QDoubleSpinBox(self)
-        self.y_pos_spin_box.setButtonSymbols(QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons)
+        self.y_pos_spin_box.setButtonSymbols(
+            QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons
+        )
         self.y_pos_spin_box.setReadOnly(True)
         self.y_pos_spin_box.setDecimals(6)
         self.y_pos_spin_box.setRange(-10000, 10000)
         self.y_pos_spin_box.setSuffix(" mm")
 
         self.z_pos_spin_box = QtWidgets.QDoubleSpinBox(self)
-        self.z_pos_spin_box.setButtonSymbols(QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons)
+        self.z_pos_spin_box.setButtonSymbols(
+            QtWidgets.QDoubleSpinBox.ButtonSymbols.NoButtons
+        )
         self.z_pos_spin_box.setReadOnly(True)
         self.z_pos_spin_box.setDecimals(6)
         self.z_pos_spin_box.setRange(-10000, 10000)
@@ -65,16 +70,24 @@ class DashboardWidget(QtWidgets.QWidget):
         self.xy_step_spin_box.setSuffix(" mm")
 
         self.left_button = QtWidgets.QPushButton("-X")
-        self.left_button.clicked.connect(lambda: self.relative_move(-abs(self.xy_step_spin_box.value()), 0, 0))
+        self.left_button.clicked.connect(
+            lambda: self.relative_move(-abs(self.xy_step_spin_box.value()), 0, 0)
+        )
 
         self.right_button = QtWidgets.QPushButton("+X")
-        self.right_button.clicked.connect(lambda: self.relative_move(+abs(self.xy_step_spin_box.value()), 0, 0))
+        self.right_button.clicked.connect(
+            lambda: self.relative_move(+abs(self.xy_step_spin_box.value()), 0, 0)
+        )
 
         self.top_button = QtWidgets.QPushButton("+Y")
-        self.top_button.clicked.connect(lambda: self.relative_move(0, +abs(self.xy_step_spin_box.value()), 0))
+        self.top_button.clicked.connect(
+            lambda: self.relative_move(0, +abs(self.xy_step_spin_box.value()), 0)
+        )
 
         self.bottom_button = QtWidgets.QPushButton("-Y")
-        self.bottom_button.clicked.connect(lambda: self.relative_move(0, -abs(self.xy_step_spin_box.value()), 0))
+        self.bottom_button.clicked.connect(
+            lambda: self.relative_move(0, -abs(self.xy_step_spin_box.value()), 0)
+        )
 
         self.z_step_spin_box = QtWidgets.QDoubleSpinBox(self)
         self.z_step_spin_box.setDecimals(6)
@@ -83,10 +96,14 @@ class DashboardWidget(QtWidgets.QWidget):
         self.z_step_spin_box.setSuffix(" mm")
 
         self.up_button = QtWidgets.QPushButton("+Z")
-        self.up_button.clicked.connect(lambda: self.relative_move(0, 0, +abs(self.z_step_spin_box.value())))
+        self.up_button.clicked.connect(
+            lambda: self.relative_move(0, 0, +abs(self.z_step_spin_box.value()))
+        )
 
         self.down_button = QtWidgets.QPushButton("-Z")
-        self.down_button.clicked.connect(lambda: self.relative_move(0, 0, -abs(self.z_step_spin_box.value())))
+        self.down_button.clicked.connect(
+            lambda: self.relative_move(0, 0, -abs(self.z_step_spin_box.value()))
+        )
 
         self.x_rel_spin_box = QtWidgets.QDoubleSpinBox(self)
         self.x_rel_spin_box.setDecimals(6)
@@ -107,7 +124,13 @@ class DashboardWidget(QtWidgets.QWidget):
         self.z_rel_spin_box.setSuffix(" mm")
 
         self.move_rel_button = QtWidgets.QPushButton("Move Rel")
-        self.move_rel_button.clicked.connect(lambda: self.relative_move(self.x_rel_spin_box.value(), self.y_rel_spin_box.value(), self.z_rel_spin_box.value()))
+        self.move_rel_button.clicked.connect(
+            lambda: self.relative_move(
+                self.x_rel_spin_box.value(),
+                self.y_rel_spin_box.value(),
+                self.z_rel_spin_box.value(),
+            )
+        )
 
         self.x_abs_spin_box = QtWidgets.QDoubleSpinBox(self)
         self.x_abs_spin_box.setDecimals(6)
@@ -128,7 +151,13 @@ class DashboardWidget(QtWidgets.QWidget):
         self.z_abs_spin_box.setSuffix(" mm")
 
         self.move_abs_button = QtWidgets.QPushButton("Move Abs")
-        self.move_abs_button.clicked.connect(lambda: self.absolute_move(self.x_abs_spin_box.value(), self.y_abs_spin_box.value(), self.z_abs_spin_box.value()))
+        self.move_abs_button.clicked.connect(
+            lambda: self.absolute_move(
+                self.x_abs_spin_box.value(),
+                self.y_abs_spin_box.value(),
+                self.z_abs_spin_box.value(),
+            )
+        )
 
         self.clear_rel_button = QtWidgets.QPushButton("Clear")
         self.clear_rel_button.setMaximumWidth(48)
@@ -170,7 +199,9 @@ class DashboardWidget(QtWidgets.QWidget):
         self.lock_calibration_button.toggled.connect(self.update_calibration_lock)
 
         self.lock_calibration_label = QtWidgets.QLabel(self)
-        self.lock_calibration_label.setText("Calibration is locked to prevent hardware damage.")
+        self.lock_calibration_label.setText(
+            "Calibration is locked to prevent hardware damage."
+        )
 
         self.lock_calibration_timeout: int = 5_000
 
@@ -180,7 +211,7 @@ class DashboardWidget(QtWidgets.QWidget):
 
         self.update_interval_spin_box = QtWidgets.QDoubleSpinBox(self)
         self.update_interval_spin_box.setDecimals(2)
-        self.update_interval_spin_box.setRange(0.01, 60.)
+        self.update_interval_spin_box.setRange(0.01, 60.0)
         self.update_interval_spin_box.setValue(1)
         self.update_interval_spin_box.setSingleStep(0.25)
         self.update_interval_spin_box.setSuffix(" s")
