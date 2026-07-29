@@ -1,5 +1,4 @@
 import logging
-from typing import cast
 
 from PySide6 import QtCore, QtWidgets
 
