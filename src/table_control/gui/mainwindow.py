@@ -2,6 +2,7 @@ import logging
 import traceback
 import webbrowser
 from pathlib import Path
+from typing import cast
 
 from PySide6 import QtCore, QtGui, QtStateMachine, QtWidgets
 
@@ -244,20 +245,31 @@ class MainWindow(QtWidgets.QMainWindow):
         self.plugin_manager.notify("before_read_settings", settings)
         settings.beginGroup("mainwindow")
 
-        geometry = settings.value("geometry", QtCore.QByteArray(), QtCore.QByteArray)
+        geometry = cast(
+            QtCore.QByteArray,
+            settings.value("geometry", QtCore.QByteArray(), QtCore.QByteArray),
+        )
         self.restoreGeometry(geometry)  # type: ignore
 
-        state = settings.value("state", QtCore.QByteArray(), QtCore.QByteArray)
+        state = cast(
+            QtCore.QByteArray,
+            settings.value("state", QtCore.QByteArray(), QtCore.QByteArray),
+        )
         self.restoreState(state)  # type: ignore
 
-        update_interval = settings.value("update_interval", 1.0, float)
-        self.dashboard.set_update_interval(update_interval)  # type: ignore
+        update_interval = cast(float, settings.value("update_interval", 1.0, float))
+        self.dashboard.set_update_interval(update_interval)
 
-        z_limit_enabled = settings.value("z_limit_enabled", False, bool)
-        self.dashboard.set_z_limit_enabled(z_limit_enabled)  # type: ignore
+        z_limit_enabled = cast(bool, settings.value("z_limit_enabled", False, bool))
+        self.dashboard.set_z_limit_enabled(z_limit_enabled)
 
-        z_limit = settings.value("z_limit", 0.0, float)
-        self.dashboard.set_z_limit(z_limit)  # type: ignore
+        z_limit = cast(float, settings.value("z_limit", 0.0, float))
+        self.dashboard.set_z_limit(z_limit)
+
+        require_calibration = cast(
+            bool, settings.value("require_calibration", True, bool)
+        )
+        self.table_controller.set_require_calibration(require_calibration)
 
         # Positions
         self.dashboard.clear_positions()
@@ -285,6 +297,9 @@ class MainWindow(QtWidgets.QMainWindow):
         settings.setValue("update_interval", self.dashboard.update_interval())
         settings.setValue("z_limit_enabled", self.dashboard.z_limit_enabled())
         settings.setValue("z_limit", self.dashboard.z_limit())
+        settings.setValue(
+            "require_calibration", self.table_controller.is_require_calibration()
+        )
 
         # Positions
         positions = self.dashboard.positions()
@@ -364,8 +379,12 @@ class MainWindow(QtWidgets.QMainWindow):
     def show_preferences(self) -> None:
         dialog = PreferencesDialog(self)
         dialog.read_settings(self.settings)
+        dialog.set_require_calibration(self.table_controller.is_require_calibration())
         self.plugin_manager.notify("before_preferences", dialog)
-        dialog.exec()
+        if dialog.exec() == QtWidgets.QDialog.DialogCode.Accepted:
+            self.table_controller.set_require_calibration(
+                dialog.is_require_calibration()
+            )
         self.plugin_manager.notify("after_preferences", dialog)
         dialog.write_settings(self.settings)
 

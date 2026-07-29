@@ -82,6 +82,8 @@ class TableContext:
             raise AbortRequest()
 
     def raise_on_calibration_error(self) -> None:
+        if not self._controller.is_require_calibration():
+            return
         for index, cal in enumerate(self._controller.calibration()):
             if cal != 0x3:  # TODO
                 self.driver.abort()
@@ -149,6 +151,7 @@ class TableController(QtCore.QObject):
 
         self.motion_timeout: float = 60.0
         self.update_interval: float = 1.0
+        self._require_calibration: bool = True
         self._state: TableState = TableState(
             is_moving=False,
             position=(0.0, 0.0, 0.0),
@@ -303,6 +306,14 @@ class TableController(QtCore.QObject):
         with self._lock:
             self._state.calibration = (x, y, z)
         self.calibration_changed.emit(x, y, z)
+
+    def is_require_calibration(self) -> bool:
+        with self._lock:
+            return self._require_calibration
+
+    def set_require_calibration(self, enabled: bool) -> None:
+        with self._lock:
+            self._require_calibration = enabled
 
     def clear_state(self) -> None:
         x = y = z = float("nan")

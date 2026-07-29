@@ -1,4 +1,5 @@
 import logging
+from typing import cast
 
 from PySide6 import QtCore, QtWidgets
 
@@ -13,7 +14,19 @@ class PreferencesDialog(QtWidgets.QDialog):
 
         self.setWindowTitle("Preferences")
 
+        self.misc_widget = QtWidgets.QWidget()
+
+        self.require_calibration_check_box = QtWidgets.QCheckBox()
+        self.require_calibration_check_box.setText("Require Calibration")
+        self.require_calibration_check_box.setToolTip(
+            "Require axis calibration for absolute movements"
+        )
+
+        misc_widget_layout = QtWidgets.QFormLayout(self.misc_widget)
+        misc_widget_layout.addWidget(self.require_calibration_check_box)
+
         self.tab_widget = QtWidgets.QTabWidget(self)
+        self.tab_widget.addTab(self.misc_widget, "Misc")
 
         self.button_box = QtWidgets.QDialogButtonBox(self)
         self.button_box.addButton(QtWidgets.QDialogButtonBox.StandardButton.Ok)
@@ -34,6 +47,12 @@ class PreferencesDialog(QtWidgets.QDialog):
     def remove_tab(self, widget: QtWidgets.QWidget) -> None:
         index = self.tab_widget.indexOf(widget)
         self.tab_widget.removeTab(index)
+
+    def is_require_calibration(self) -> bool:
+        return self.require_calibration_check_box.isChecked()
+
+    def set_require_calibration(self, enabled: bool) -> None:
+        self.require_calibration_check_box.setChecked(enabled)
 
     def read_settings(self, settings: QtCore.QSettings) -> None: ...
 
