@@ -7,13 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-07-29
+
+### Added
+
+- _Require Calibration_ option permitting absolute movements without calibration (#42).
+
 ### Changed
 
-- Replaced `mypy` with `pyright` as the type checker in the `tox` workflow, fixed all(#41).
+- Replaced `mypy` with `pyright` as the type checker in the `tox` workflow (#41).
 
 ### Fixed
 
-- Resolved all reported `pyright` type errors across the codebase (#41).
+- Resolved all reported `pyright` type errors and warnings across the codebase (#41).
 
 ## [0.12.0] - 2026-04-29
 
@@ -161,7 +167,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for Hydra controller.
 - Support for Corvus controller.
 
-[unreleased]: https://github.com/hephy-dd/table-control/compare/v0.12.0...HEAD
+[unreleased]: https://github.com/hephy-dd/table-control/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/hephy-dd/table-control/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/hephy-dd/table-control/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/hephy-dd/table-control/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/hephy-dd/table-control/compare/v0.9.0...v0.10.0
