@@ -1,12 +1,11 @@
 # Load custom plugins here
 
+from .corvus import CorvusPlugin
+from .dummy import DummyPlugin
+from .hydra2x import Hydra2xPlugin
+from .legacy_socket import LegacySocketPlugin
 from .logger import LoggerPlugin
 from .scpi_socket import SCPISocketPlugin
-from .legacy_socket import LegacySocketPlugin
-
-from .dummy import DummyPlugin
-from .corvus import CorvusPlugin
-from .hydra2x import Hydra2xPlugin
 
 
 def register_plugins(app) -> None:

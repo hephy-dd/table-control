@@ -4,8 +4,8 @@ from pathlib import Path
 
 from table_control.gui.positions import (
     TablePosition,
-    write_positions_csv,
     export_positions_csv,
+    write_positions_csv,
 )
 
 

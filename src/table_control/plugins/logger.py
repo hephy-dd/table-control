@@ -1,6 +1,6 @@
 import logging
 import threading
-from typing import Callable, List
+from collections.abc import Callable
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
@@ -52,13 +52,13 @@ class Handler(logging.Handler):
 class RecordsQueue:
     def __init__(self) -> None:
         self.lock = threading.RLock()
-        self.records: List[logging.LogRecord] = []
+        self.records: list[logging.LogRecord] = []
 
     def append(self, record: logging.LogRecord) -> None:
         with self.lock:
             self.records.append(record)
 
-    def fetch(self) -> List[logging.LogRecord]:
+    def fetch(self) -> list[logging.LogRecord]:
         with self.lock:
             records = self.records[:]
             self.records.clear()
@@ -165,4 +165,4 @@ class LoggingWidget(QtWidgets.QTextEdit):
     def format_record(cls, record: logging.LogRecord) -> str:
         """Format log record."""
         timestamp = cls.format_time(record.created)
-        return "{}\t{}\t{}".format(timestamp, record.levelname, record.message)
+        return f"{timestamp}\t{record.levelname}\t{record.message}"

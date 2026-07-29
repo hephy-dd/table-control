@@ -1,4 +1,5 @@
 import logging
+
 from PySide6 import QtCore, QtWidgets
 
 __all__ = ["PreferencesDialog"]

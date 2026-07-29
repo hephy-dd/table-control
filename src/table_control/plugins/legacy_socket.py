@@ -165,8 +165,8 @@ class SocketServer:
                         if self.shutdown_requested.is_set():
                             break
 
-            except Exception as exc:
-                logger.exception(exc)
+            except Exception:
+                logger.exception("failed creating socket server")
                 time.sleep(1.0)
         self.shutdown_finished.set()
 
@@ -182,8 +182,8 @@ class SocketServer:
                     resp = self.handle_message(line)
                     if resp is not None:
                         conn.sendall(f"{resp}{self.termination}".encode())
-        except Exception as exc:
-            logger.exception(exc)
+        except Exception:
+            logger.exception("failed to handle client")
         finally:
             conn.close()
 
@@ -240,7 +240,8 @@ class SocketServer:
         # ???
         if command == "???":
             # Note: Corvus Controller v3.0.2 bug sends "\n\r"
-            return "\n".join(
+            sep = "\n"
+            return sep.join(
                 [
                     "Command list:",
                     "PO? - Get Table Position and Status",

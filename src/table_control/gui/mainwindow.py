@@ -7,14 +7,15 @@ from PySide6 import QtCore, QtGui, QtStateMachine, QtWidgets
 
 from ..core.driver import Driver
 from ..core.pluginmanager import PluginManager
-
-from . import APP_TITLE, APP_VERSION, APP_CONTENTS_URL
-from .preferences import PreferencesDialog
+from . import APP_CONTENTS_URL, APP_TITLE, APP_VERSION
+from .connection import ConnectionDialog, ConnectionType
 from .controller import TableController
-from .connection import ConnectionType, ConnectionDialog
 from .dashboard import DashboardWidget, TablePosition
 from .positions import export_positions_csv
+from .preferences import PreferencesDialog
 from .utils import load_icon, load_text
+
+logger = logging.getLogger(__name__)
 
 
 class MainWindow(QtWidgets.QMainWindow):
@@ -356,7 +357,7 @@ class MainWindow(QtWidgets.QMainWindow):
         x, y, z = self.dashboard.table_position()
         position_text = f"{x:.6f},{y:.6f},{z:.6f}"
         QtGui.QGuiApplication.clipboard().setText(position_text)
-        logging.info("Copied current position to clipboard: %s", position_text)
+        logger.info("Copied current position to clipboard: %s", position_text)
         self.statusBar().showMessage(f"Copied {position_text} to clipboard", 3000)
 
     @QtCore.Slot()

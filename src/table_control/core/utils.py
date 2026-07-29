@@ -38,4 +38,4 @@ def get_visa_library(resource_name: str) -> str:
 
 def is_serial_resource(resource_name: str) -> bool:
     s = resource_name.strip().upper()
-    return s.startswith("ASRL") or s.startswith("COM")
+    return s.startswith(("ASRL", "COM"))

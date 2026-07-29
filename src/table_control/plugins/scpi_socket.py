@@ -20,11 +20,11 @@ All SCPI commands are case insensitive (e.g. pos? is equal to POS?).
 """
 
 import logging
+import re
 import select
 import socket
 import threading
 import time
-import re
 from typing import Final
 
 from PySide6 import QtCore, QtWidgets
@@ -178,8 +178,8 @@ class SocketServer:
                         if self.shutdown_requested.is_set():
                             break
 
-            except Exception as exc:
-                logger.exception(exc)
+            except Exception:
+                logger.exception("failed creating socket server")
                 time.sleep(1.0)
         self.shutdown_finished.set()
 
@@ -195,8 +195,8 @@ class SocketServer:
                     resp = self.handle_message(line)
                     if resp is not None:
                         conn.sendall(f"{resp}\n".encode())
-        except Exception as exc:
-            logger.exception(exc)
+        except Exception:
+            logger.exception("failed to handle client")
         finally:
             conn.close()
 

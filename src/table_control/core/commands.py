@@ -1,7 +1,8 @@
 import logging
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable, Protocol
+from typing import Protocol
 
 from .driver import Driver, Vector, VectorMask
 
@@ -11,15 +12,10 @@ class Context(Protocol):
     driver: Driver
 
     def set_moving(self, enabled: bool) -> None: ...
-
     def set_position(self, x: float, y: float, z: float) -> None: ...
-
     def set_calibration(self, x: int, y: int, z: int) -> None: ...
-
     def raise_on_abort(self) -> None: ...
-
     def raise_on_calibration_error(self) -> None: ...
-
     def perform_motion(self, motion: Callable[[Driver], None]) -> None: ...
 
 

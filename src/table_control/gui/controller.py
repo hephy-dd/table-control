@@ -1,29 +1,28 @@
 import itertools
+import logging
+import queue
 import threading
 import time
-import queue
-import logging
-from collections.abc import Iterator, Sequence
+from collections.abc import Callable, Generator, Iterator, Sequence
 from contextlib import ExitStack, contextmanager
 from dataclasses import dataclass
-from typing import Callable
 
 from PySide6 import QtCore
 
-from ..core.driver import Driver
-from ..core.resource import ResourceConfig, Resource
 from ..core.commands import (
+    CalibrateCommand,
     Command,
     ConnectCommand,
     DisconnectCommand,
-    MoveRelativeCommand,
-    MoveAbsoluteCommand,
-    CalibrateCommand,
-    RangeMeasureCommand,
     EnableJoystickCommand,
-    QueryPositionCommand,
+    MoveAbsoluteCommand,
+    MoveRelativeCommand,
     QueryCalibrationCommand,
+    QueryPositionCommand,
+    RangeMeasureCommand,
 )
+from ..core.driver import Driver
+from ..core.resource import Resource, ResourceConfig
 
 logger = logging.getLogger(__name__)
 
@@ -38,8 +37,7 @@ class CalibrationError(Exception): ...
 
 
 def poll_interval(steps: Sequence[float]) -> Iterator[float]:
-    for step in steps:
-        yield step
+    yield from steps
     while steps:
         yield steps[-1]
 
@@ -53,7 +51,10 @@ class Connection:
 
 class TableContext:
     def __init__(
-        self, controller: "TableController", driver: Driver, logger: logging.Logger
+        self,
+        controller: TableController,
+        driver: Driver,
+        logger: logging.Logger,
     ) -> None:
         self._controller = controller
         self.driver = driver
@@ -196,12 +197,12 @@ class TableController(QtCore.QObject):
                 command = self.get_command(timeout=self._queue_timeout)
                 if isinstance(command, Command):
                     self.event_pump(command)
-            except Exception as exc:
-                logger.exception(exc)
+            except Exception:
+                logger.exception("failed to handle command")
                 self.disconnected.emit()
 
     @contextmanager
-    def context_factory(self) -> Iterator[TableContext]:
+    def context_factory(self) -> Generator[TableContext]:
         """Open all resources described by `appliance`, construct its driver,
         and yield (driver, resources). All are closed on exit.
         """

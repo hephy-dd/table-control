@@ -83,7 +83,9 @@ def test_notify_skips_plugins_without_hook() -> None:
     assert calls == [("RecorderPlugin", ("x",), {})]
 
 
-def test_notify_warns_and_skips_non_callable_hook(caplog: pytest.LogCaptureFixture) -> None:
+def test_notify_warns_and_skips_non_callable_hook(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
     mgr = PluginManager()
     mgr.register_plugin(NonCallableHookPlugin())
 

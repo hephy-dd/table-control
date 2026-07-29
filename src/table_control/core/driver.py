@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Iterable
+from collections.abc import Iterable
 
 from .resource import Resource
 from .vector import Vector, VectorMask

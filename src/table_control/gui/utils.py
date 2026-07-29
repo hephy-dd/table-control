@@ -1,6 +1,5 @@
+from collections.abc import Iterable
 from importlib import resources
-from typing import Iterable
-
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
@@ -34,9 +33,11 @@ def load_icon(filename: str) -> QtGui.QIcon:
 
 
 def load_text(filename: str) -> str:
-    with resources.path("table_control.assets", filename) as path:
-        with open(path, "r") as fp:
-            return fp.read()
+    with (
+        resources.path("table_control.assets", filename) as path,
+        open(path, "r") as fp,
+    ):
+        return fp.read()
 
 
 class FlashLabel(QtWidgets.QLabel):

@@ -37,6 +37,8 @@ convention can act as a plugin.
 
 import logging
 
+__all__ = ["PluginManager"]
+
 logger = logging.getLogger(__name__)
 
 

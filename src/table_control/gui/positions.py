@@ -1,7 +1,8 @@
 import csv
+from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, TextIO
+from typing import Any, TextIO
 
 from PySide6 import QtCore, QtWidgets
 
@@ -112,14 +113,13 @@ class TablePositionsWidget(QtWidgets.QWidget):
         current_item = self.positions_tree.currentItem()
         index = self.positions_tree.indexOfTopLevelItem(current_item)
         count = self.positions_tree.topLevelItemCount()
+        is_valid = bool(current_item)
         self.add_button.setEnabled(True)
-        self.edit_button.setEnabled(True if current_item else False)
-        self.up_button.setEnabled(True if current_item and index != 0 else False)
-        self.down_button.setEnabled(
-            True if current_item and index + 1 < count else False
-        )
-        self.remove_button.setEnabled(True if current_item else False)
-        self.move_button.setEnabled(True if current_item else False)
+        self.edit_button.setEnabled(is_valid)
+        self.up_button.setEnabled(is_valid and index != 0)
+        self.down_button.setEnabled(is_valid and index + 1 < count)
+        self.remove_button.setEnabled(is_valid)
+        self.move_button.setEnabled(is_valid)
 
     def clear_positions(self) -> None:
         while self.positions_tree.topLevelItemCount():

@@ -1,6 +1,6 @@
 from PySide6 import QtCore, QtWidgets
 
-from .positions import TablePositionsWidget, TablePosition
+from .positions import TablePosition, TablePositionsWidget
 from .utils import FlashLabel
 
 
