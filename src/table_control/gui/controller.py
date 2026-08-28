@@ -82,13 +82,15 @@ class TableContext:
             raise AbortRequest()
 
     def raise_on_calibration_error(self) -> None:
-        if not self._controller.is_require_calibration():
-            return
+        require_calibration = self._controller.is_require_calibration()
         for index, cal in enumerate(self._controller.calibration()):
+            axis = "XYZ"[index]
             if cal != 0x3:  # TODO
-                self.driver.abort()
-                axis = "XYZ"[index]
-                raise CalibrationError(f"Axis not calibrated: {axis}")
+                if require_calibration:
+                    self.driver.abort()
+                    raise CalibrationError(f"Axis not calibrated: {axis}")
+                else:
+                    logger.warning("Axis not calibrated: %s", axis)
 
     def perform_motion(self, motion: Callable[[Driver], None]) -> None:
         self.raise_on_abort()
