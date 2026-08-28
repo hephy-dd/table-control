@@ -111,8 +111,8 @@ class TablePositionsWidget(QtWidgets.QWidget):
 
     def update_buttons(self) -> None:
         current_item = self.positions_tree.currentItem()
-        index = self.positions_tree.indexOfTopLevelItem(current_item)
         count = self.positions_tree.topLevelItemCount()
+        index = self.positions_tree.indexOfTopLevelItem(current_item)  # type: ignore
         is_valid = bool(current_item)
         self.add_button.setEnabled(True)
         self.edit_button.setEnabled(is_valid)
