@@ -45,6 +45,8 @@ Documentation = "https://github.com/hephy-dd/table-control"
 [project.scripts]
 table-control = "table_control.__main__:main"
 
-
 [tool.ruff.lint]
 extend-ignore = ["BLE001", "RUF022"]
+
+[tool.pyright]
+typeCheckingMode = "standard"
