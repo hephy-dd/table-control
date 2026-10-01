@@ -8,6 +8,7 @@ Provides a unified interface for supported hardware controllers and exposes both
 
 - ITK CorvusTT
 - ITK Hydra
+- ITK Andromeda 3 RM
 
 ## SCPI Socket
 
