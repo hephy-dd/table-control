@@ -24,7 +24,6 @@ import re
 import select
 import socket
 import threading
-import time
 from typing import Final
 
 from PySide6 import QtCore, QtWidgets
@@ -41,13 +40,28 @@ DEFAULT_PORT: Final[int] = 4000
 class SCPISocketPlugin:
     def on_install(self, window) -> None:
         self.settings = window.settings
-        self.socket_server: SocketServer | None = None
         self.table_controller = window.table_controller
-        self.restart_server()
+
+        self.worker_shutdown = threading.Event()
+        self.worker_update = threading.Event()
+
+        self.worker_thread = threading.Thread(
+            target=self._worker,
+            name="SCPI socket worker",
+            daemon=True,
+        )
+        self.worker_thread.start()
 
     def on_uninstall(self, window) -> None:
-        if self.socket_server:
-            self.socket_server.shutdown(timeout=60.0)
+        logger.info("SCPI socket: stopping worker...")
+
+        self.worker_shutdown.set()
+        self.worker_update.set()  # Wake worker immediately.
+        self.worker_thread.join(timeout=60.0)
+
+        if self.worker_thread.is_alive():
+            logger.warning("SCPI socket: worker did not stop within timeout")
+
         logger.info("uninstalled %r", type(self).__name__)
 
     def on_before_preferences(self, dialog: PreferencesDialog) -> None:
@@ -58,23 +72,63 @@ class SCPISocketPlugin:
 
     def on_after_preferences(self, dialog: PreferencesDialog) -> None:
         if dialog.result() == dialog.DialogCode.Accepted:
-            self.write_settings(self.settings, self.preferences_tab.to_dict())
-            self.restart_server()
+            self.write_settings(
+                self.settings,
+                self.preferences_tab.to_dict(),
+            )
+            self.worker_update.set()
+
         dialog.remove_tab(self.preferences_tab)
 
-    def restart_server(self) -> None:
-        data = self.read_settings(QtCore.QSettings())
-        if self.socket_server:
-            logger.info("SCPI socket: shutdown server...")
-            self.socket_server.shutdown(timeout=60.0)
-            self.socket_server = None
-        if data.get("enabled", False):
-            hostname = data.get("hostname", DEFAULT_HOST)
-            port = data.get("port", DEFAULT_PORT)
-            logger.info("SCPI socket: starting server on port %s...", port)
-            self.socket_server = SocketServer(self.table_controller, hostname, port)
-            thread = threading.Thread(target=self.socket_server)
-            thread.start()
+    def _worker(self) -> None:
+        server: SocketServer | None = None
+        server_config: tuple[str, int] | None = None
+
+        try:
+            while not self.worker_shutdown.is_set():
+                data = self.read_settings(self.settings)
+
+                enabled = data.get("enabled", False)
+                hostname = data.get("hostname", DEFAULT_HOST)
+                port = data.get("port", DEFAULT_PORT)
+                config = (hostname, port)
+
+                # Stop an existing server if it was disabled or its configuration changed.
+                if server is not None and (not enabled or config != server_config):
+                    logger.info("SCPI socket: stopping server...")
+                    server.close()
+                    server = None
+                    server_config = None
+
+                # Create the server when enabled.
+                if enabled and server is None:
+                    try:
+                        server = SocketServer(self.table_controller, hostname, port)
+                    except OSError:
+                        logger.exception(
+                            "SCPI socket: failed to start on %s:%s", hostname, port
+                        )
+                        self.worker_update.wait(timeout=1.0)
+                        self.worker_update.clear()
+                        continue
+
+                    server_config = config
+
+                if server is not None:
+                    server.process()
+                else:
+                    self.worker_update.wait(timeout=1.0)
+
+                self.worker_update.clear()
+
+        except Exception:
+            logger.exception("SCPI socket: worker failed")
+
+        finally:
+            if server is not None:
+                server.close()
+
+            logger.info("SCPI socket: worker stopped")
 
     def read_settings(self, settings: QtCore.QSettings) -> dict:
         scpi_socket = settings.value("plugins/scpi_socket", {})
@@ -145,60 +199,84 @@ class PreferencesWidget(QtWidgets.QWidget):
 
 
 class SocketServer:
-    def __init__(self, table, host, port) -> None:
-        self.shutdown_requested = threading.Event()
-        self.shutdown_finished = threading.Event()
+    def __init__(self, table, host: str, port: int) -> None:
         self.table = table
         self.error_stack: list = []
         self.host: str = host
         self.port: int = port
         self.timeout: float = 1.0
 
-    def shutdown(self, timeout: float | None = None) -> None:
-        self.shutdown_requested.set()
-        if timeout is not None:
-            self.shutdown_finished.wait(timeout=timeout)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.socket.bind((self.host, self.port))
+        self.socket.listen()
 
-    def __call__(self) -> None:
-        while not self.shutdown_requested.is_set():
+        # Receive buffer for each persistent connection.
+        self.clients: dict[socket.socket, bytearray] = {}
+
+        logger.info("SCPI socket: listening on: %s:%s", self.host, self.port)
+
+    def close(self) -> None:
+        for conn in self.clients:
+            conn.close()
+        self.clients.clear()
+
+        if self.socket is not None:
             try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    s.bind((self.host, self.port))
-                    s.listen()
-                    logger.info(
-                        "SCPI socket: listening on: %s:%s", self.host, self.port
-                    )
+                self.socket.close()
+            finally:
+                self.socket = None
 
-                    while True:
-                        ready, _, _ = select.select([s], [], [], self.timeout)
-                        if s in ready:
-                            conn, addr = s.accept()
-                            self.handle_client(conn, addr)
-                        if self.shutdown_requested.is_set():
-                            break
+    def process(self) -> None:
+        if self.socket is None:
+            return
 
-            except Exception:
-                logger.exception("failed creating socket server")
-                time.sleep(1.0)
-        self.shutdown_finished.set()
+        ready, _, _ = select.select([self.socket, *self.clients], [], [], self.timeout)
 
-    def handle_client(self, conn, addr):
-        logger.info("SCPI socket: connection from: %s", addr)
+        for sock in ready:
+            if sock is self.socket:
+                conn, addr = self.socket.accept()
+                self.clients[conn] = bytearray()
+                logger.info("SCPI socket: connection from: %s", addr)
+            else:
+                self.handle_client(sock)
+
+    def handle_client(self, conn: socket.socket) -> None:
         try:
-            with conn.makefile("r") as f:
-                for raw_line in f:
-                    line = raw_line.rstrip()
-                    if not line:
-                        continue
-                    logger.info("SCPI socket: received: %s", line)
-                    resp = self.handle_message(line)
-                    if resp is not None:
-                        conn.sendall(f"{resp}\n".encode())
+            data = conn.recv(4096)
+
+            if not data:
+                self.close_client(conn)
+                return
+
+            buffer = self.clients[conn]
+            buffer.extend(data)
+
+            while b"\n" in buffer:
+                raw_line, _, remainder = buffer.partition(b"\n")
+                buffer[:] = remainder
+
+                line = raw_line.rstrip(b"\r").decode()
+                if not line:
+                    continue
+
+                logger.info("SCPI socket: received: %s", line)
+
+                resp = self.handle_message(line)
+                if resp is not None:
+                    conn.sendall(f"{resp}\n".encode())
+
+            if len(buffer) > 4096:
+                logger.warning("Exceeded maximum command length")
+                self.close_client(conn)
+
         except Exception:
             logger.exception("failed to handle client")
-        finally:
-            conn.close()
+            self.close_client(conn)
+
+    def close_client(self, conn: socket.socket) -> None:
+        self.clients.pop(conn, None)
+        conn.close()
 
     def handle_message(self, message: str) -> str | None:
         command = message.split()[0].lower()
