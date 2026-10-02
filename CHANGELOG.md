@@ -19,9 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fix `*IDN?` response in the SCPI socket to provide SCPI-compliant identification (#46).
 - Fix broken ZLIMIT commands in the Legacy TCP socket (#46).
 
-## [
-
-] - 2026-10-01
+## [0.15.0] - 2026-10-01
 
 ### Changed
 
