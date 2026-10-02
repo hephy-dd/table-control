@@ -4,7 +4,7 @@ build-backend = "uv_build"
 
 [project]
 name = "table-control"
-version = "0.15.0"
+version = "0.15.1"
 authors = [
     {name = "Bernhard Arnold", email = "bernhard.arnold@oeaw.ac.at"}
 ]

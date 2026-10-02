@@ -7,11 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.15.0] - 2026-10-01
+## [0.15.1] - 2026-10-02
 
 ### Changed
 
-- Support multiple persistent connections in the SCPI server (#44).
+- Support multiple persistent connections in the Legacy TCP socket (#46).
+- Improve SCPI command parsing in the SCPI socket (#46).
+
+### Fixed
+
+- Fix `*IDN?` response in the SCPI socket to provide SCPI-compliant identification (#46).
+- Fix broken ZLIMIT commands in the Legacy TCP socket (#46).
+
+## [
+
+] - 2026-10-01
+
+### Changed
+
+- Support multiple persistent connections in the SCPI socket (#44).
 - Switch build backend from Hatchling to `uv` (#45).
 
 ## [0.14.0] - 2026-08-28
@@ -180,7 +194,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Support for Hydra controller.
 - Support for Corvus controller.
 
-[unreleased]: https://github.com/hephy-dd/table-control/compare/v0.15.0...HEAD
+[unreleased]: https://github.com/hephy-dd/table-control/compare/v0.15.1...HEAD
+[0.15.1]: https://github.com/hephy-dd/table-control/compare/v0.15.0...v0.15.1
 [0.15.0]: https://github.com/hephy-dd/table-control/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/hephy-dd/table-control/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/hephy-dd/table-control/compare/v0.12.0...v0.13.0

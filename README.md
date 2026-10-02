@@ -17,7 +17,7 @@ Make sure to enable and configure the SCPI socket in the application preferences
 
 | Command                   | Description          | Example                                         |
 | ------------------------- | -------------------- | ----------------------------------------------- |
-| `*IDN?`                   | application identity | `*IDN?` -> `MBI,table-control,0,0.15.0`         |
+| `*IDN?`                   | application identity | `*IDN?` -> `MBI,table-control,0,0.15.1`         |
 | `*CLS`                    | clears error stack   | `*CLS`                                          |
 | `[:]POSition?`            | get position         | `POS?` -> `0.000000,0.000000,0.000000`          |
 | `[:]CALibration[:STATe]?` | get calibration      | `CAL?` -> `3,3,3` (`1`=cal, `2`=rm, `3`=cal+rm) |
@@ -40,8 +40,8 @@ Make sure to enable and configure the TCP socket in the application preferences.
 | Command             | Description                          | Example                                 |
 | ------------------- | ------------------------------------ | --------------------------------------- |
 | `PO?`               | get position and status (moving)     | `PO?` -> `0.000000,0.000000,0.000000,0` |
-| `MR=<DELTA>,<AXIS>` | 1-axis relative move (x=1, y=2, z=3) | `MR=4.200,1`                            |
-| `MA=<X>,<Y>,<Z>`    | 3-axis absolute move                 | `MA=10.000,20.000,2.000`                |
+| `MR=<DELTA>,<AXIS>` | 1-axis relative move (x=1, y=2, z=3) | `MR=4.200,1` -> `Done...`               |
+| `MA=<X>,<Y>,<Z>`    | 3-axis absolute move                 | `MA=10.000,20.000,2.000` -> `Done...`   |
 | `???`               | prints help                          |                                         |
 
 **Note:** Legacy TCP commands are case-sensitive.
