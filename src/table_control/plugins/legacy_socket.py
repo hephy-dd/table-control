@@ -13,17 +13,21 @@ import logging
 import select
 import socket
 import threading
-import time
-from typing import Final
+from dataclasses import asdict, dataclass
 
 from PySide6 import QtCore, QtWidgets
 
+from table_control.gui.controller import TableController
 from table_control.gui.preferences import PreferencesDialog
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_HOST: Final[str] = "localhost"
-DEFAULT_PORT: Final[int] = 6345
+
+@dataclass(frozen=True, slots=True)
+class Settings:
+    enabled: bool = False
+    hostname: str = "localhost"
+    port: int = 6345
 
 
 class LegacySocketPlugin:
@@ -31,46 +35,105 @@ class LegacySocketPlugin:
         self.settings = window.settings
         self.socket_server: SocketServer | None = None
         self.table_controller = window.table_controller
-        self.restart_server()
+
+        self.worker_shutdown = threading.Event()
+        self.worker_update = threading.Event()
+
+        self.worker_thread = threading.Thread(
+            target=self._worker,
+            name="Legacy socket worker",
+            daemon=True,
+        )
+        self.worker_thread.start()
 
     def on_uninstall(self, window) -> None:
-        if self.socket_server:
-            self.socket_server.shutdown(timeout=60.0)
+        logger.info("Legacy socket: stopping worker...")
+
+        self.worker_shutdown.set()
+        self.worker_update.set()  # Wake worker immediately.
+        self.worker_thread.join(timeout=5.0)
+
+        if self.worker_thread.is_alive():
+            logger.warning("Legacy socket: worker did not stop within timeout")
 
     def on_before_preferences(self, dialog: PreferencesDialog) -> None:
         self.preferences_tab = PreferencesWidget()
-        data = self.read_settings(self.settings)
-        self.preferences_tab.from_dict(data)
+        settings = self.read_settings(self.settings)
+        self.preferences_tab.from_settings(settings)
         dialog.add_tab(self.preferences_tab, "Legacy TCP")
 
     def on_after_preferences(self, dialog: PreferencesDialog) -> None:
         if dialog.result() == dialog.DialogCode.Accepted:
-            self.write_settings(self.settings, self.preferences_tab.to_dict())
-            self.restart_server()
+            self.write_settings(self.settings, self.preferences_tab.to_settings())
+            self.worker_update.set()
+
         dialog.remove_tab(self.preferences_tab)
 
-    def restart_server(self) -> None:
-        data = self.read_settings(QtCore.QSettings())
-        if self.socket_server:
-            logger.info("legacy socket: shutdown server...")
-            self.socket_server.shutdown(timeout=60.0)
-            self.socket_server = None
-        if data.get("enabled", False):
-            hostname = data.get("hostname", DEFAULT_HOST)
-            port = data.get("port", DEFAULT_PORT)
-            logger.info("legacy socket: starting server on port %s...", port)
-            self.socket_server = SocketServer(self.table_controller, hostname, port)
-            thread = threading.Thread(target=self.socket_server)
-            thread.start()
+    def read_settings(self, settings: QtCore.QSettings) -> Settings:
+        data = settings.value("plugins/legacy_socket", {})
+        default_settings = Settings()
+        if isinstance(data, dict):
+            return Settings(
+                enabled=data.get("enabled", default_settings.enabled),
+                hostname=data.get("hostname", default_settings.hostname),
+                port=data.get("port", default_settings.port),
+            )
+        return default_settings
 
-    def read_settings(self, settings: QtCore.QSettings) -> dict:
-        legacy_socket = settings.value("plugins/legacy_socket", {})
-        if isinstance(legacy_socket, dict):
-            return legacy_socket
-        return {}
+    def write_settings(self, settings: QtCore.QSettings, data: Settings) -> None:
+        settings.setValue("plugins/legacy_socket", asdict(data))
 
-    def write_settings(self, settings: QtCore.QSettings, data: dict) -> None:
-        settings.setValue("plugins/legacy_socket", data)
+    def _worker(self) -> None:
+        server: SocketServer | None = None
+        server_config: tuple[str, int] | None = None
+
+        try:
+            while not self.worker_shutdown.is_set():
+                settings = self.read_settings(self.settings)
+
+                enabled = settings.enabled
+                hostname = settings.hostname
+                port = settings.port
+                config = (hostname, port)
+
+                # Stop an existing server if it was disabled or its configuration changed.
+                if server is not None and (not enabled or config != server_config):
+                    logger.info("Legacy socket: stopping server...")
+                    server.close()
+                    server = None
+                    server_config = None
+
+                # Create the server when enabled.
+                if enabled and server is None:
+                    try:
+                        server = SocketServer(
+                            MessageHandler(self.table_controller), hostname, port
+                        )
+                    except OSError:
+                        logger.exception(
+                            "Legacy socket: failed to start on %s:%s", hostname, port
+                        )
+                        self.worker_update.wait(timeout=1.0)
+                        self.worker_update.clear()
+                        continue
+
+                    server_config = config
+
+                if server is not None:
+                    server.process()
+                else:
+                    self.worker_update.wait(timeout=1.0)
+
+                self.worker_update.clear()
+
+        except Exception:
+            logger.exception("Legacy socket: worker failed")
+
+        finally:
+            if server is not None:
+                server.close()
+
+            logger.info("Legacy socket: worker stopped")
 
 
 class PreferencesWidget(QtWidgets.QWidget):
@@ -97,8 +160,9 @@ class PreferencesWidget(QtWidgets.QWidget):
         layout.addWidget(self.reset_defaults_button)
 
     def reset_defaults(self) -> None:
-        self.set_hostname(DEFAULT_HOST)
-        self.set_port(DEFAULT_PORT)
+        default_settings = Settings()
+        self.set_hostname(default_settings.hostname)
+        self.set_port(default_settings.port)
 
     def hostname(self) -> str:
         return self.hostname_line_edit.text().strip()
@@ -118,74 +182,103 @@ class PreferencesWidget(QtWidgets.QWidget):
     def set_server_enabled(self, enabled: bool) -> None:
         self.enabled_check_box.setChecked(enabled)
 
-    def to_dict(self) -> dict:
-        return {
-            "hostname": self.hostname(),
-            "port": self.port(),
-            "enabled": self.is_server_enabled(),
-        }
+    def to_settings(self) -> Settings:
+        return Settings(
+            enabled=self.is_server_enabled(),
+            hostname=self.hostname(),
+            port=self.port(),
+        )
 
-    def from_dict(self, data: dict) -> None:
-        self.set_hostname(data.get("hostname", DEFAULT_HOST))
-        self.set_port(data.get("port", DEFAULT_PORT))
-        self.set_server_enabled(data.get("enabled", False))
+    def from_settings(self, settings: Settings) -> None:
+        self.set_server_enabled(settings.enabled)
+        self.set_hostname(settings.hostname)
+        self.set_port(settings.port)
 
 
 class SocketServer:
-    def __init__(self, table, host, port) -> None:
-        self.shutdown_requested = threading.Event()
-        self.shutdown_finished = threading.Event()
-        self.table = table
+    def __init__(self, handler: MessageHandler, host, port) -> None:
+        self.handler = handler
         self.host: str = host
         self.port: int = port
         self.timeout: float = 1.0
-        self.termination: str = "\r\n"
+        self.termination: bytes = b"\r\n"
 
-    def shutdown(self, timeout: float | None = None) -> None:
-        self.shutdown_requested.set()
-        if timeout is not None:
-            self.shutdown_finished.wait(timeout=timeout)
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.socket.bind((self.host, self.port))
+        self.socket.listen()
 
-    def __call__(self) -> None:
-        while not self.shutdown_requested.is_set():
-            try:
-                with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-                    s.bind((self.host, self.port))
-                    s.listen()
-                    logger.info(
-                        "legacy socket: listening on: %s:%s", self.host, self.port
-                    )
+        # Receive buffer for each persistent connection.
+        self.clients: dict[socket.socket, bytearray] = {}
 
-                    while True:
-                        ready, _, _ = select.select([s], [], [], self.timeout)
-                        if s in ready:
-                            conn, addr = s.accept()
-                            self.handle_client(conn, addr)
-                        if self.shutdown_requested.is_set():
-                            break
+        logger.info("Legacy socket: listening on: %s:%s", self.host, self.port)
 
-            except Exception:
-                logger.exception("failed creating socket server")
-                time.sleep(1.0)
-        self.shutdown_finished.set()
-
-    def handle_client(self, conn, addr):
-        logger.info("legacy socket: connection from: %s", addr)
-        try:
-            with conn.makefile("r") as f:
-                for raw_line in f:
-                    line = raw_line.rstrip()
-                    if not line:
-                        continue
-                    logger.info("legacy socket: received: %s", line)
-                    resp = self.handle_message(line)
-                    if resp is not None:
-                        conn.sendall(f"{resp}{self.termination}".encode())
-        except Exception:
-            logger.exception("failed to handle client")
-        finally:
+    def close(self) -> None:
+        for conn in self.clients:
             conn.close()
+        self.clients.clear()
+
+        if self.socket is not None:
+            try:
+                self.socket.close()
+            finally:
+                self.socket = None
+
+    def process(self) -> None:
+        if self.socket is None:
+            return
+
+        ready, _, _ = select.select([self.socket, *self.clients], [], [], self.timeout)
+
+        for sock in ready:
+            if sock is self.socket:
+                conn, addr = self.socket.accept()
+                self.clients[conn] = bytearray()
+                logger.info("Legacy socket: connection from: %s", addr)
+            else:
+                self.handle_client(sock)
+
+    def handle_client(self, conn: socket.socket) -> None:
+        try:
+            data = conn.recv(4096)
+
+            if not data:
+                self.close_client(conn)
+                return
+
+            buffer = self.clients[conn]
+            buffer.extend(data)
+
+            while self.termination in buffer:
+                raw_line, _, remainder = buffer.partition(self.termination)
+                buffer[:] = remainder
+
+                line = raw_line.rstrip(b"\r").decode()
+                if not line:
+                    continue
+
+                logger.info("Legacy socket: received: %s", line)
+
+                resp = self.handler.handle_message(line)
+                if resp is not None:
+                    conn.sendall(f"{resp}".encode() + self.termination)
+
+            if len(buffer) > 4096:
+                logger.warning("Legacy socket: exceeded maximum command length")
+                self.close_client(conn)
+
+        except Exception:
+            logger.exception("Legacy socket: failed to handle client")
+            self.close_client(conn)
+
+    def close_client(self, conn: socket.socket) -> None:
+        self.clients.pop(conn, None)
+        conn.close()
+
+
+class MessageHandler:
+    def __init__(self, controller: TableController) -> None:
+        self.controller = controller
 
     def handle_message(self, message: str) -> str | None:
         command = message.strip().split("=")[0]
@@ -196,8 +289,9 @@ class SocketServer:
         # PO?
         if command == "PO?":
             try:
-                x, y, z = self.table.position()
-                status = self.table.is_moving()
+                current_state = self.controller.current_state()
+                x, y, z = current_state.position
+                status = current_state.is_moving
                 return f"{x:.6f},{y:.6f},{z:.6f},{status:d}"
             except Exception as exc:
                 logger.error(exc)
@@ -208,6 +302,8 @@ class SocketServer:
             try:
                 _, args = message.split("=")
                 delta, axis = args.split(",")
+                if axis not in ("1", "2", "3"):
+                    raise ValueError(f"Invalid axis: {axis!r}")
                 axis_index = int(axis) - 1
                 delta_vector: list[float] = [0.0, 0.0, 0.0]
                 delta_vector[axis_index] = float(delta)
@@ -216,7 +312,7 @@ class SocketServer:
                 logger.error(exc)
                 return response_not_valid
             try:
-                self.table.move_relative(float(x), float(y), float(z))
+                self.controller.move_relative(float(x), float(y), float(z))
                 return response_done
             except Exception as exc:
                 logger.error(exc)
@@ -231,7 +327,7 @@ class SocketServer:
                 logger.error(exc)
                 return response_not_valid
             try:
-                self.table.move_absolute(float(x), float(y), float(z))
+                self.controller.move_absolute(float(x), float(y), float(z))
                 return response_done
             except Exception as exc:
                 logger.error(exc)

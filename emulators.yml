@@ -8,3 +8,6 @@ emulators:
   hydra2:
     model: urn:comet:model:itk:hydra
     port: 12002
+  andromeda:
+    model: urn:comet:model:itk:andromeda
+    port: 12003

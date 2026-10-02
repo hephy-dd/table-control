@@ -15,20 +15,20 @@ Provides a unified interface for supported hardware controllers and exposes both
 The application can be used as generic proxy for different motion controllers.
 Make sure to enable and configure the SCPI socket in the application preferences.
 
-|Command |Description |Example |
-|--------|------------|--------|
-|`*IDN?` | application identity | `*IDN?` -> `table-control v0.9.0` |
-|`*CLS` | clears error stack | `*CLS` |
-|`[:]POSition?` | get position | `POS?` -> `0.000000,0.000000,0.000000` |
-|`[:]CALibration[:STATe]?` | get calibration | `CAL?` -> `3,3,3` (`1`=cal, `2`=rm, `3`=cal+rm) |
-|`[:]MOVE[:STATe]?` | is moving? | `MOVE?` -> `1` |
-|`[:]MOVE:RELative <POS>` | 3-axis relative move | `MOVE:REL 0,0,4.200` |
-|`[:]MOVE:ABSolute <POS>` | 3-axis absolute move | `MOVE:ABS 10.000,20.000,2.000` |
-|`[:]MOVE:ABORT` | abort a movement | `MOVE:ABORT` |
-|`[:]ZLIMit[:VALue]?` | get Z limit value | `ZLIM?` -> `2.000000` |
-|`[:]ZLIMit:ENABle?` | is Z limit enabled? | `ZLIM:ENAB?` -> `1` |
-|`[:]SYStem:ERRor[:NEXT]?` | next error on stack | `SYS:ERR?` -> `0,"no error"` |
-|`[:]SYStem:ERRor:COUNt?` | size of error stack | `SYS:ERR:COUN?` -> `0` |
+| Command                   | Description          | Example                                         |
+| ------------------------- | -------------------- | ----------------------------------------------- |
+| `*IDN?`                   | application identity | `*IDN?` -> `MBI,table-control,0,0.15.0`         |
+| `*CLS`                    | clears error stack   | `*CLS`                                          |
+| `[:]POSition?`            | get position         | `POS?` -> `0.000000,0.000000,0.000000`          |
+| `[:]CALibration[:STATe]?` | get calibration      | `CAL?` -> `3,3,3` (`1`=cal, `2`=rm, `3`=cal+rm) |
+| `[:]MOVE[:STATe]?`        | is moving?           | `MOVE?` -> `1`                                  |
+| `[:]MOVE:RELative <POS>`  | 3-axis relative move | `MOVE:REL 0,0,4.200`                            |
+| `[:]MOVE:ABSolute <POS>`  | 3-axis absolute move | `MOVE:ABS 10.000,20.000,2.000`                  |
+| `[:]MOVE:ABORt`           | abort a movement     | `MOVE:ABORT`                                    |
+| `[:]ZLIMit[:VALue]?`      | get Z limit value    | `ZLIM?` -> `2.000000`                           |
+| `[:]ZLIMit:ENABle?`       | is Z limit enabled?  | `ZLIM:ENAB?` -> `1`                             |
+| `[:]SYSTem:ERRor[:NEXT]?` | next error on stack  | `SYST:ERR?` -> `0,"No error"`                   |
+| `[:]SYSTem:ERRor:COUNt?`  | size of error stack  | `SYST:ERR:COUN?` -> `0`                         |
 
 **Note:** SCPI commands are case-insensitive (e.g. `pos?` is equivalent to `POS?`).
 
@@ -37,12 +37,12 @@ Make sure to enable and configure the SCPI socket in the application preferences
 The application can emulate TCP commands for Corvus Controller GUI v3.0.2 used at MBI/HEPHY.
 Make sure to enable and configure the TCP socket in the application preferences.
 
-|Command |Description |Example |
-|--------|------------|--------|
-|`PO?` | get position and status (moving) | `PO?` -> `0.000000,0.000000,0.000000,0` |
-|`MR=<DELTA>,<AXIS>` | 1-axis relative move (x=1, y=2, z=3) | `MR=4.200,1` |
-|`MA=<X>,<Y>,<Z>` | 3-axis absolute move | `MA=10.000,20.000,2.000` |
-|`???` | prints help | |
+| Command             | Description                          | Example                                 |
+| ------------------- | ------------------------------------ | --------------------------------------- |
+| `PO?`               | get position and status (moving)     | `PO?` -> `0.000000,0.000000,0.000000,0` |
+| `MR=<DELTA>,<AXIS>` | 1-axis relative move (x=1, y=2, z=3) | `MR=4.200,1`                            |
+| `MA=<X>,<Y>,<Z>`    | 3-axis absolute move                 | `MA=10.000,20.000,2.000`                |
+| `???`               | prints help                          |                                         |
 
 **Note:** Legacy TCP commands are case-sensitive.
 

@@ -5,7 +5,8 @@ import threading
 import time
 from collections.abc import Callable, Generator, Iterator, Sequence
 from contextlib import ExitStack, contextmanager
-from dataclasses import dataclass
+from copy import deepcopy
+from dataclasses import dataclass, replace
 
 from PySide6 import QtCore
 
@@ -83,7 +84,7 @@ class TableContext:
 
     def raise_on_calibration_error(self) -> None:
         require_calibration = self._controller.is_require_calibration()
-        for index, cal in enumerate(self._controller.calibration()):
+        for index, cal in enumerate(self._controller.current_state().calibration):
             axis = "XYZ"[index]
             if cal != 0x3:  # TODO
                 if require_calibration:
@@ -119,7 +120,7 @@ class CommandEnvelope:
     command: Command
 
 
-@dataclass(slots=True)
+@dataclass(slots=True, frozen=True)
 class TableState:
     is_moving: bool
     position: tuple[float, float, float]
@@ -164,6 +165,9 @@ class TableController(QtCore.QObject):
         self._connection: Connection | None = None
         self._t0 = time.monotonic()
         self._abort_request: threading.Event = threading.Event()
+
+    def current_state(self) -> TableState:
+        return deepcopy(self._state)
 
     def put_command(self, command: Command, priority: int = 0) -> None:
         with self._lock:
@@ -254,7 +258,8 @@ class TableController(QtCore.QObject):
         self.put_command(MoveRelativeCommand(x, y, z))
 
     def move_absolute(self, x: float, y: float, z: float) -> None:
-        z_limit = self._state.z_limit if self._state.z_limit_enabled else None
+        state = self._state
+        z_limit = state.z_limit if state.z_limit_enabled else None
         self.put_command(MoveAbsoluteCommand(x, y, z, z_limit))
 
     def calibrate(self, x: bool, y: bool, z: bool) -> None:
@@ -267,10 +272,10 @@ class TableController(QtCore.QObject):
         self.update_interval = float(interval)
 
     def set_z_limit_enabled(self, enabled: bool) -> None:
-        self._state.z_limit_enabled = bool(enabled)
+        self._state = replace(self._state, z_limit_enabled=bool(enabled))
 
     def set_z_limit(self, value: float) -> None:
-        self._state.z_limit = float(value)
+        self._state = replace(self._state, z_limit=float(value))
 
     def is_abort_requested(self) -> bool:
         return self._abort_request.is_set()
@@ -278,35 +283,19 @@ class TableController(QtCore.QObject):
     def clear_abort_request(self) -> None:
         self._abort_request.clear()
 
-    def is_moving(self) -> bool:
-        with self._lock:
-            return self._state.is_moving
-
-    def position(self) -> tuple[float, float, float]:
-        with self._lock:
-            return self._state.position
-
-    def calibration(self) -> tuple[int, int, int]:
-        with self._lock:
-            return self._state.calibration
-
     def set_moving(self, state: bool) -> None:
-        with self._lock:
-            if state != self._state.is_moving:
-                self._state.is_moving = state
+        self._state = replace(self._state, is_moving=state)
         if state:
             self.movement_started.emit()
         else:
             self.movement_finished.emit()
 
     def set_position(self, x: float, y: float, z: float) -> None:
-        with self._lock:
-            self._state.position = (x, y, z)
+        self._state = replace(self._state, position=(x, y, z))
         self.position_changed.emit(x, y, z)
 
     def set_calibration(self, x: int, y: int, z: int) -> None:
-        with self._lock:
-            self._state.calibration = (x, y, z)
+        self._state = replace(self._state, calibration=(x, y, z))
         self.calibration_changed.emit(x, y, z)
 
     def is_require_calibration(self) -> bool:
@@ -319,10 +308,12 @@ class TableController(QtCore.QObject):
 
     def clear_state(self) -> None:
         x = y = z = float("nan")
-        with self._lock:
-            self._state.is_moving = False
-            self._state.position = (x, y, z)
-            self._state.calibration = (0, 0, 0)
+        self._state = replace(
+            self._state,
+            is_moving=False,
+            position=(x, y, z),
+            calibration=(0, 0, 0),
+        )
         self.position_changed.emit(x, y, z)
 
     def on_connected(self, context) -> None:
