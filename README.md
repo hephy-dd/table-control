@@ -18,7 +18,7 @@ Make sure to enable and configure the SCPI socket in the application preferences
 | Command                   | Description          | Example                                         |
 | ------------------------- | -------------------- | ----------------------------------------------- |
 | `*IDN?`                   | application identity | `*IDN?` -> `MBI,table-control,0,0.15.1`         |
-| `*CLS`                    | clears error stack   | `*CLS`                                          |
+| `*CLS`                    | clears error queue   | `*CLS`                                          |
 | `[:]POSition?`            | get position         | `POS?` -> `0.000000,0.000000,0.000000`          |
 | `[:]CALibration[:STATe]?` | get calibration      | `CAL?` -> `3,3,3` (`1`=cal, `2`=rm, `3`=cal+rm) |
 | `[:]MOVE[:STATe]?`        | is moving?           | `MOVE?` -> `1`                                  |
@@ -27,8 +27,8 @@ Make sure to enable and configure the SCPI socket in the application preferences
 | `[:]MOVE:ABORt`           | abort a movement     | `MOVE:ABORT`                                    |
 | `[:]ZLIMit[:VALue]?`      | get Z limit value    | `ZLIM?` -> `2.000000`                           |
 | `[:]ZLIMit:ENABle?`       | is Z limit enabled?  | `ZLIM:ENAB?` -> `1`                             |
-| `[:]SYSTem:ERRor[:NEXT]?` | next error on stack  | `SYST:ERR?` -> `0,"No error"`                   |
-| `[:]SYSTem:ERRor:COUNt?`  | size of error stack  | `SYST:ERR:COUN?` -> `0`                         |
+| `[:]SYSTem:ERRor[:NEXT]?` | next error on queue  | `SYST:ERR?` -> `0,"No error"`                   |
+| `[:]SYSTem:ERRor:COUNt?`  | size of error queue  | `SYST:ERR:COUN?` -> `0`                         |
 
 **Note:** SCPI commands are case-insensitive (e.g. `pos?` is equivalent to `POS?`).
 
