@@ -9,32 +9,36 @@ Supported SCPI commands:
 [:]MOVE[:STATe]?           is moving?
 [:]MOVE:RELative <POS>     3-axis relative move
 [:]MOVE:ABSolute <POS>     3-axis absolute move
-[:]MOVE:ABORT              abort a movement
+[:]MOVE:ABORt              abort a movement
 [:]ZLIMit[:VALue]?         get Z limit value
 [:]ZLIMit:ENABle?          is Z limit enabled?
-[:]SYStem:ERRor[:NEXT]?    next error on stack
-[:]SYStem:ERRor:COUNt?     size of error stack
+[:]SYSTem:ERRor[:NEXT]?    next error on stack
+[:]SYSTem:ERRor:COUNt?     size of error stack
 
 All SCPI commands are case insensitive (e.g. pos? is equal to POS?).
 
 """
 
 import logging
-import re
 import select
 import socket
 import threading
-from typing import Final
+from dataclasses import asdict, dataclass
 
 from PySide6 import QtCore, QtWidgets
 
 from table_control.gui import APP_TITLE, APP_VERSION
+from table_control.gui.controller import TableController
 from table_control.gui.preferences import PreferencesDialog
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_HOST: Final[str] = "localhost"
-DEFAULT_PORT: Final[int] = 4000
+
+@dataclass(frozen=True, slots=True)
+class Settings:
+    enabled: bool = False
+    hostname: str = "localhost"
+    port: int = 4000
 
 
 class SCPISocketPlugin:
@@ -57,28 +61,37 @@ class SCPISocketPlugin:
 
         self.worker_shutdown.set()
         self.worker_update.set()  # Wake worker immediately.
-        self.worker_thread.join(timeout=60.0)
+        self.worker_thread.join(timeout=5.0)
 
         if self.worker_thread.is_alive():
             logger.warning("SCPI socket: worker did not stop within timeout")
 
-        logger.info("uninstalled %r", type(self).__name__)
-
     def on_before_preferences(self, dialog: PreferencesDialog) -> None:
         self.preferences_tab = PreferencesWidget()
-        data = self.read_settings(self.settings)
-        self.preferences_tab.from_dict(data)
+        settings = self.read_settings(self.settings)
+        self.preferences_tab.from_settings(settings)
         dialog.add_tab(self.preferences_tab, "SCPI")
 
     def on_after_preferences(self, dialog: PreferencesDialog) -> None:
         if dialog.result() == dialog.DialogCode.Accepted:
-            self.write_settings(
-                self.settings,
-                self.preferences_tab.to_dict(),
-            )
+            self.write_settings(self.settings, self.preferences_tab.to_settings())
             self.worker_update.set()
 
         dialog.remove_tab(self.preferences_tab)
+
+    def read_settings(self, settings: QtCore.QSettings) -> Settings:
+        data = settings.value("plugins/scpi_socket", {})
+        default_settings = Settings()
+        if isinstance(data, dict):
+            return Settings(
+                enabled=data.get("enabled", default_settings.enabled),
+                hostname=data.get("hostname", default_settings.hostname),
+                port=data.get("port", default_settings.port),
+            )
+        return default_settings
+
+    def write_settings(self, settings: QtCore.QSettings, data: Settings) -> None:
+        settings.setValue("plugins/scpi_socket", asdict(data))
 
     def _worker(self) -> None:
         server: SocketServer | None = None
@@ -86,11 +99,11 @@ class SCPISocketPlugin:
 
         try:
             while not self.worker_shutdown.is_set():
-                data = self.read_settings(self.settings)
+                settings = self.read_settings(self.settings)
 
-                enabled = data.get("enabled", False)
-                hostname = data.get("hostname", DEFAULT_HOST)
-                port = data.get("port", DEFAULT_PORT)
+                enabled = settings.enabled
+                hostname = settings.hostname
+                port = settings.port
                 config = (hostname, port)
 
                 # Stop an existing server if it was disabled or its configuration changed.
@@ -103,7 +116,9 @@ class SCPISocketPlugin:
                 # Create the server when enabled.
                 if enabled and server is None:
                     try:
-                        server = SocketServer(self.table_controller, hostname, port)
+                        server = SocketServer(
+                            MessageHandler(self.table_controller), hostname, port
+                        )
                     except OSError:
                         logger.exception(
                             "SCPI socket: failed to start on %s:%s", hostname, port
@@ -130,15 +145,6 @@ class SCPISocketPlugin:
 
             logger.info("SCPI socket: worker stopped")
 
-    def read_settings(self, settings: QtCore.QSettings) -> dict:
-        scpi_socket = settings.value("plugins/scpi_socket", {})
-        if isinstance(scpi_socket, dict):
-            return scpi_socket
-        return {}
-
-    def write_settings(self, settings: QtCore.QSettings, data: dict) -> None:
-        settings.setValue("plugins/scpi_socket", data)
-
 
 class PreferencesWidget(QtWidgets.QWidget):
     def __init__(self, parent: QtWidgets.QWidget | None = None) -> None:
@@ -164,8 +170,9 @@ class PreferencesWidget(QtWidgets.QWidget):
         layout.addWidget(self.reset_defaults_button)
 
     def reset_defaults(self) -> None:
-        self.set_hostname(DEFAULT_HOST)
-        self.set_port(DEFAULT_PORT)
+        default_settings = Settings()
+        self.set_hostname(default_settings.hostname)
+        self.set_port(default_settings.port)
 
     def hostname(self) -> str:
         return self.hostname_line_edit.text().strip()
@@ -185,26 +192,26 @@ class PreferencesWidget(QtWidgets.QWidget):
     def set_server_enabled(self, enabled: bool) -> None:
         self.enabled_check_box.setChecked(enabled)
 
-    def to_dict(self) -> dict:
-        return {
-            "hostname": self.hostname(),
-            "port": self.port(),
-            "enabled": self.is_server_enabled(),
-        }
+    def to_settings(self) -> Settings:
+        return Settings(
+            hostname=self.hostname(),
+            port=self.port(),
+            enabled=self.is_server_enabled(),
+        )
 
-    def from_dict(self, data: dict) -> None:
-        self.set_hostname(data.get("hostname", DEFAULT_HOST))
-        self.set_port(data.get("port", DEFAULT_PORT))
-        self.set_server_enabled(data.get("enabled", False))
+    def from_settings(self, settings: Settings) -> None:
+        self.set_hostname(settings.hostname)
+        self.set_port(settings.port)
+        self.set_server_enabled(settings.enabled)
 
 
 class SocketServer:
-    def __init__(self, table, host: str, port: int) -> None:
-        self.table = table
-        self.error_stack: list = []
+    def __init__(self, handler: MessageHandler, host: str, port: int) -> None:
+        self.handler: MessageHandler = handler
         self.host: str = host
         self.port: int = port
         self.timeout: float = 1.0
+        self.termination: bytes = b"\n"
 
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -252,8 +259,8 @@ class SocketServer:
             buffer = self.clients[conn]
             buffer.extend(data)
 
-            while b"\n" in buffer:
-                raw_line, _, remainder = buffer.partition(b"\n")
+            while self.termination in buffer:
+                raw_line, _, remainder = buffer.partition(self.termination)
                 buffer[:] = remainder
 
                 line = raw_line.rstrip(b"\r").decode()
@@ -262,9 +269,9 @@ class SocketServer:
 
                 logger.info("SCPI socket: received: %s", line)
 
-                resp = self.handle_message(line)
+                resp = self.handler.handle_message(line)
                 if resp is not None:
-                    conn.sendall(f"{resp}\n".encode())
+                    conn.sendall(f"{resp}".encode() + self.termination)
 
             if len(buffer) > 4096:
                 logger.warning("Exceeded maximum command length")
@@ -278,81 +285,249 @@ class SocketServer:
         self.clients.pop(conn, None)
         conn.close()
 
+
+class MessageHandler:
+    def __init__(self, controller: TableController) -> None:
+        self.controller = controller
+        self.error_queue = ErrorQueue()
+
     def handle_message(self, message: str) -> str | None:
-        command = message.split()[0].lower()
+        message = message.strip()
 
-        # *IDN?
-        if re.match(r"^\*idn\?$", command):
-            return f"{APP_TITLE} v{APP_VERSION}"
-
-        # *CLS
-        if re.match(r"^\*cls$", command):
-            self.error_stack.clear()
+        if not message:
+            self.error_queue.append_error(-102, "Syntax error")
             return None
 
-        # [:]POSition[:STATe]?
-        if re.match(r"^\:?pos(ition)?(\:stat(e)?)?\?$", command):
-            x, y, z = self.table.position()
+        # Separate header from parameters.
+        parts = message.split(None, 1)
+        header = parts[0]
+        arguments = parts[1] if len(parts) == 2 else None
+
+        query = header.endswith("?")
+        if query:
+            header = header[:-1]
+
+        # IEEE 488.2 common commands
+        if header.upper() == "*IDN":
+            if not query:
+                self.error_queue.append_error(-113, "Undefined header")
+                return None
+
+            if arguments is not None:
+                self.error_queue.append_error(-108, "Parameter not allowed")
+                return None
+
+            return f"MBI,{APP_TITLE},0,{APP_VERSION}"
+
+        if header.upper() == "*CLS":
+            if query:
+                self.error_queue.append_error(-113, "Undefined header")
+                return None
+
+            if arguments is not None:
+                self.error_queue.append_error(-108, "Parameter not allowed")
+                return None
+
+            self.error_queue.clear()
+            return None
+
+        # :POSition[:STATe]?
+        if match_header(header, "POSition") or match_header(header, "POSition:STATe"):
+            if not query:
+                return self._undefined_header()
+
+            if arguments is not None:
+                return self._parameter_not_allowed()
+
+            x, y, z = self.controller.current_state().position
             return f"{x:.6f},{y:.6f},{z:.6f}"
 
-        # [:]CALibration[:STATe]?
-        if re.match(r"^\:?cal(ibration)?(\:stat(e)?)?\?$", command):
-            x, y, z = self.table.calibration()
+        # :CALibration[:STATe]?
+        if match_header(header, "CALibration") or match_header(
+            header, "CALibration:STATe"
+        ):
+            if not query:
+                return self._undefined_header()
+
+            if arguments is not None:
+                return self._parameter_not_allowed()
+
+            x, y, z = self.controller.current_state().calibration
             return f"{x:d},{y:d},{z:d}"
 
-        # [:]MOVE[:STATe]?
-        if re.match(r"^\:?move(\:stat(e)?)?\?$", command):
-            moving = self.table.is_moving()
-            return "1" if moving else "0"
+        # :MOVE[:STATe]?
+        if match_header(header, "MOVE") or match_header(header, "MOVE:STATe"):
+            if not query:
+                return self._undefined_header()
 
-        # [:]MOVE:RELative X Y Z
-        if re.match(r"^\:?move\:rel(ative)?$", command):
-            try:
-                _, args = message.split(maxsplit=1)
-                dx, dy, dz = args.split(",")
-                self.table.move_relative(float(dx), float(dy), float(dz))
-            except Exception:
-                self.error_stack.append((101, "invalid attributes"))
+            if arguments is not None:
+                return self._parameter_not_allowed()
+
+            return "1" if self.controller.current_state().is_moving else "0"
+
+        # :MOVE:RELative <x>,<y>,<z>
+        if match_header(header, "MOVE:RELative"):
+            if query:
+                return self._undefined_header()
+
+            values = self._float_parameters(arguments, 3)
+            if values is None:
                 return None
+
+            self.controller.move_relative(*values)
             return None
 
-        # [:]MOVE:ABSolute X Y Z
-        if re.match(r"^\:?move\:abs(olute)?$", command):
-            try:
-                _, args = message.split(maxsplit=1)
-                x, y, z = args.split(",")
-                self.table.move_absolute(float(x), float(y), float(z))
-            except Exception:
-                self.error_stack.append((101, "invalid attributes"))
+        # :MOVE:ABSolute <x>,<y>,<z>
+        if match_header(header, "MOVE:ABSolute"):
+            if query:
+                return self._undefined_header()
+
+            values = self._float_parameters(arguments, 3)
+            if values is None:
                 return None
+
+            self.controller.move_absolute(*values)
             return None
 
-        # [:]ZLIMit:ENAbled?
-        if re.match(r"^\:?zlim(it)?\:enab(le)?\?$", command):
-            enabled = self.table.z_limit_enabled
-            return "1" if enabled else "0"
+        # :MOVE:ABORt
+        if match_header(header, "MOVE:ABORt"):
+            if query:
+                return self._undefined_header()
 
-        # [:]ZLIMit[:VALue]?
-        if re.match(r"^\:?zlim(it)?(\:val(ue)?)?\?$", command):
-            value = self.table.z_limit
-            return f"{value:.6f}"
+            if arguments is not None:
+                return self._parameter_not_allowed()
 
-        # [:]MOVE:ABORT
-        if re.match(r"^\:?move\:abort$", command):
-            self.table.abort()
+            self.controller.abort()
             return None
 
-        # [:]SYStem:ERRor:COUNt?
-        if re.match(r"^\:?sys(t(em)?)?\:err(or)?\:coun(t)?\?$", command):
-            return format(len(self.error_stack))
+        # :ZLIMit:ENAbled?
+        if match_header(header, "ZLIMit:ENAbled"):
+            if not query:
+                return self._undefined_header()
 
-        # [:]SYStem:ERRor[:NEXT]?
-        if re.match(r"^\:?sys(t(em)?)?\:err(or)?(\:next)?\?$", command):
-            if self.error_stack:
-                code, msg = self.error_stack.pop(0)
-                return f'{code},"{msg}"'
-            return '0,"no error"'
+            if arguments is not None:
+                return self._parameter_not_allowed()
 
-        self.error_stack.append((100, "invalid command"))
+            return "1" if self.controller.current_state().z_limit_enabled else "0"
 
+        # :ZLIMit[:VALue]?
+        if match_header(header, "ZLIMit") or match_header(header, "ZLIMit:VALue"):
+            if not query:
+                return self._undefined_header()
+
+            if arguments is not None:
+                return self._parameter_not_allowed()
+
+            return f"{self.controller.current_state().z_limit:.6f}"
+
+        # :SYSTem:ERRor:COUNt?
+        if match_header(header, "SYSTem:ERRor:COUNt"):
+            if not query:
+                return self._undefined_header()
+
+            if arguments is not None:
+                return self._parameter_not_allowed()
+
+            return str(self.error_queue.count())
+
+        # :SYSTem:ERRor[:NEXT]?
+        if match_header(header, "SYSTem:ERRor") or match_header(
+            header, "SYSTem:ERRor:NEXT"
+        ):
+            if not query:
+                return self._undefined_header()
+
+            if arguments is not None:
+                return self._parameter_not_allowed()
+
+            if error := self.error_queue.next_error():
+                return str(error)
+
+            return str(SCPIError(0, "No error"))
+
+        return self._undefined_header()
+
+    def _undefined_header(self) -> None:
+        self.error_queue.append_error(-113, "Undefined header")
+
+    def _parameter_not_allowed(self) -> None:
+        self.error_queue.append_error(-108, "Parameter not allowed")
+
+    def _float_parameters(
+        self,
+        arguments: str | None,
+        count: int,
+    ) -> tuple[float, ...] | None:
+        if arguments is None:
+            self.error_queue.append_error(-109, "Missing parameter")
+            return None
+
+        parts = [p.strip() for p in arguments.split(",")]
+
+        if len(parts) < count:
+            self.error_queue.append_error(-109, "Missing parameter")
+            return None
+
+        if len(parts) > count:
+            self.error_queue.append_error(-108, "Parameter not allowed")
+            return None
+
+        try:
+            return tuple(float(p) for p in parts)
+        except ValueError:
+            self.error_queue.append_error(-128, "Numeric data error")
+            return None
+
+
+@dataclass(frozen=True, slots=True)
+class SCPIError:
+    code: int
+    message: str
+
+    def __str__(self) -> str:
+        return f'{self.code},"{self.message}"'
+
+
+class ErrorQueue:
+    def __init__(self) -> None:
+        self.error_queue: list[SCPIError] = []
+
+    def append_error(self, code: int, message: str) -> None:
+        self.error_queue.append(SCPIError(code, message))
+
+    def count(self) -> int:
+        return len(self.error_queue)
+
+    def clear(self) -> None:
+        self.error_queue.clear()
+
+    def next_error(self) -> SCPIError | None:
+        if self.error_queue:
+            return self.error_queue.pop(0)
         return None
+
+
+def match_keyword(token: str, specification: str) -> bool:
+    """Match a SCPI keyword according to its short/long form."""
+
+    token = token.upper()
+    full = specification.upper()
+
+    min_length = sum(c.isupper() for c in specification)
+
+    return min_length <= len(token) <= len(full) and full.startswith(token)
+
+
+def match_header(header: str, specification: str) -> bool:
+    """Match a hierarchical SCPI header."""
+
+    header = header.lstrip(":")
+    specification = specification.lstrip(":")
+
+    actual = header.split(":")
+    expected = specification.split(":")
+
+    if len(actual) != len(expected):
+        return False
+
+    return all(match_keyword(a, e) for a, e in zip(actual, expected))
